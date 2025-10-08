@@ -43,8 +43,8 @@ All colors MUST be HSL.
     --shadow-card: 0 4px 20px -4px hsl(142 30% 50% / 0.1);
     --shadow-elevated: 0 10px 40px -10px hsl(142 30% 40% / 0.15);
     
-    --texture-dots: radial-gradient(circle, hsl(142 76% 36% / 0.08) 1px, transparent 1px);
-    --texture-size: 24px 24px;
+    --texture-dots: radial-gradient(circle, hsl(142 76% 36% / 0.15) 1px, transparent 1px);
+    --texture-size: 20px 20px;
 
     --sidebar-background: 0 0% 98%;
 
