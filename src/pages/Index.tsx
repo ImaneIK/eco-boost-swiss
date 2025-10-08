@@ -86,8 +86,9 @@ export default function Index() {
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
+        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'var(--texture-dots)', backgroundSize: 'var(--texture-size)' }}></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center relative z-10">
           <section className="space-y-6">
             <motion.h2
               className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight text-foreground"
