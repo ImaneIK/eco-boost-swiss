@@ -1,89 +1,259 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import heroImage from "@/assets/hero-solar.jpg";
-import solarPanels from "@/assets/solar-panels.jpg";
+import heroImage from "@/assets/solarpumps.jpg";
+import solarPanels from "@/assets/heat-pump.jpg";
 import heatPump from "@/assets/heat-pump.jpg";
 import happyFamily from "@/assets/happy-family.jpg";
-import savings from "@/assets/savings.jpg";
+import savings from "@/assets/savings3.jpeg";
 import installation from "@/assets/installation.jpg";
+import { Navigate, useNavigate } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+import ImprovedSubventionsSection from "@/components/ui/ImprovedSubventionsSection";
+import emailjs from '@emailjs/browser';
+
+
 
 export default function Index() {
+  const navigate = useNavigate();
+  const formRef = useRef<HTMLDivElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
-    projectType: "photovoltaic",
-    canton: "",
+    projectType: "panneaux solaires",
+    codepostal: "",
     surface: "",
     name: "",
     email: "",
     phone: "",
+    details: "",
   });
-  const [submitted, setSubmitted] = useState(false);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
 
-  function validate() {
-    const e: Record<string, string> = {};
-    if (!form.canton) e.canton = "Indiquez votre canton";
-    if (!form.name) e.name = "Votre prénom est requis";
-    if (!form.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email))
-      e.email = "Email invalide";
-    if (!form.phone) e.phone = "Téléphone requis";
-    return e;
-  }
+  // Simulator states
+  const [simulatorForm, setSimulatorForm] = useState({
+    type: "",
+    codepostal: "",
+    surface: "",
+    cout: "",
+  });
+  const [simulatorResult, setSimulatorResult] = useState({
+    federale: 0,
+    cantonale: 0,
+    total: 0,
+    net: 0,
+  });
+  const [showSimulatorResult, setShowSimulatorResult] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const eobj = validate();
-    setErrors(eobj);
-    if (Object.keys(eobj).length === 0) {
+
+  const ldJson = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "Comparatifdevis - Devis subventionnés",
+        "url": "https://devis-front.vercel.app/",
+        "logo": "https://devis-front.vercel.app/favicon.ico"
+      },
+      {
+        "@type": "WebPage",
+        "name": "Devis subventionnés - Automatisation des devis B2B",
+        "description": "Transformez vos devis en contrats signés. Plateforme automatisée pour créer, gérer et suivre vos devis B2B en Suisse Romande, UE et Afrique du Nord.",
+        "url": "https://devis-front.vercel.app/"
+      }
+    ]
+  };
+
+  // 🧠 Restore form from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("quoteForm");
+    if (saved) setForm(JSON.parse(saved));
+  }, []);
+
+useEffect(() => {
+  emailjs.init("UgrE56x2fPhCSxUgK"); // Your EmailJS public key
+}, []);
+
+
+
+  // 🚀 Submission helper
+  const submitForm = async (data: typeof form, clientId: string) => {
+    try {
       setSubmitted(true);
-      setTimeout(() => {
-        setForm({
-          projectType: form.projectType,
-          canton: "",
-          surface: "",
-          name: "",
-          email: "",
-          phone: "",
-        });
-        setSubmitted(false);
-      }, 3000);
+    } catch (err: any) {
+      alert("Une erreur est survenue, réessayez plus tard.");
     }
-  }
+  };
+
+  const validateForm = () => {
+  const newErrors:any = {};
+
+  if (!form.projectType) newErrors.projectType = 'Veuillez sélectionner un type de projet';
+  if (!form.codepostal) newErrors.codepostal = 'Veuillez indiquer votre code postal / région';
+  if (!form.details || form.details.trim().length < 10) newErrors.details = 'La description doit faire au moins 10 caractères';
+  if (!form.name || form.name.trim().length < 2) newErrors.name = 'Le nom doit faire au moins 2 caractères';
+  if (!form.email || !/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Veuillez entrer un email valide';
+  if (!form.phone || form.phone.length < 10) newErrors.phone = 'Veuillez entrer un numéro de téléphone valide';
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
+  // 📬 Form submit click
+const handleSubmit = async (e: React.FormEvent) => { // Added type for TS
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true); // Start loading
+
+    const templateParams = {
+      submittedAt: new Date().toISOString(),
+      projectType: form.projectType,
+      codepostal: form.codepostal,
+      details: form.details,
+      name: form.name,
+      email: form.email,
+      phone: form.phone
+    };
+
+    try {
+      // FIXED: Second param is Template ID (not Public Key!)
+      const response = await emailjs.send(
+        'service_m2f6pta',        // Your Service ID
+        'template_8so6cuj',       // <-- REPLACE: e.g., 'template_abc123' from dashboard
+        templateParams
+      );
+      console.log('Email sent successfully!', response, response.status, response.text);
+      
+      setSubmitted(true); // Hide form, show success
+      setForm({ projectType: '', codepostal: '', details: '', surface: '', name: '', email: '', phone: '' });
+      setErrors({});
+      
+      alert('Devis envoyés avec succès ! Vous recevrez une réponse sous 24h.');
+      
+    } catch (error) {
+      console.error('Failed to send email:', error); // Check this in console!
+      alert('Erreur lors de l\'envoi. Veuillez réessayer ou nous contacter directement.');
+    } finally {
+      setLoading(false); // Stop loading
+    }
+  };
+
+
+
+  
+
+  const scrollToForm = () =>
+    formRef.current?.scrollIntoView({ behavior: "smooth" });
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/30">
-      {/* Header */}
-      <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-lg shadow-sm">
-            AH
+      {submitted && <div>Devis soumis ! Redirection vers votre tableau de bord...</div>}
+ 
+ {/* header */}
+ <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      {/* Logo & Title */}
+      <div className="flex items-center gap-3">
+         <div className="w-10 h-10 p-1 bg-gray-100 rounded-lg flex items-center justify-center text-primary-foreground font-bold">
+                  <img src="/logo.png" alt="Logo Comparatifdevis" className="w-6 h-6" />
           </div>
-          <div>
-            <h1 className="text-base sm:text-lg font-bold text-foreground">
-              AH Digital — Devis subventionnés
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Photovoltaïque & Pompes à chaleur — Suisse romande
-            </p>
-          </div>
+        <div>
+          <h1 className="text-base sm:text-lg font-bold text-green-600">
+            Comparatifdevis.ch
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Photovoltaïque & Pompes à chaleur — Suisse romande
+          </p>
         </div>
-        <nav className="hidden md:flex gap-6 text-sm">
-          <a className="text-muted-foreground hover:text-foreground transition-colors" href="#how">
+      </div>
+
+      {/* Desktop Nav */}
+      <nav className="hidden md:flex gap-6 items-center text-sm">
+        <a
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          href="#how"
+        >
+          Comment ça marche
+        </a>
+        <a
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          href="#subventions"
+        >
+          Subventions
+        </a>
+        <a
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          href="#testimonials"
+        >
+          Témoignages
+        </a>
+
+       
+          <button
+            className="bg-primary text-primary-foreground px-5 py-2 rounded-lg font-medium hover:shadow-lg transition-shadow"
+            onClick={scrollToForm}
+          >
+           Profitez-en
+          </button>
+        
+      </nav>
+
+      {/* Mobile Menu Button */}
+      <div className="md:hidden flex items-center">
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="p-2 rounded-lg hover:bg-muted/20 transition"
+        >
+          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileOpen && (
+        <div className="absolute top-full left-0 w-full bg-card/95 backdrop-blur-sm md:hidden shadow-lg border-t border-border/50 flex flex-col items-center gap-4 py-4 z-40">
+          <a
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            href="#how"
+            onClick={() => setMobileOpen(false)}
+          >
             Comment ça marche
           </a>
-          <a className="text-muted-foreground hover:text-foreground transition-colors" href="#subventions">
+          <a
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            href="#subventions"
+            onClick={() => setMobileOpen(false)}
+          >
             Subventions
           </a>
-          <a className="text-muted-foreground hover:text-foreground transition-colors" href="#testimonials">
+          <a
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            href="#testimonials"
+            onClick={() => setMobileOpen(false)}
+          >
             Témoignages
           </a>
-          <a
-            className="bg-primary text-primary-foreground px-5 py-2 rounded-lg font-medium hover:shadow-lg transition-shadow"
-            href="#form"
-          >
-            Obtenir mes devis
-          </a>
-        </nav>
-      </header>
+
+         
+            <a
+              href="#form"
+              className="bg-primary text-primary-foreground px-5 py-2 rounded-lg font-medium hover:shadow-lg transition-shadow"
+              onClick={() => {
+                navigate("#form");
+                setMobileOpen(false);
+              }}
+            >
+              Profitez-en
+            </a>
+        </div>
+      )}
+    </header>
 
       {/* Hero Section */}
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
@@ -96,9 +266,20 @@ export default function Index() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-              Installez des panneaux solaires ou une pompe à chaleur —{" "}
-              <span className="text-primary">payez moins grâce aux subventions</span>
+              🌱 Passez à l'énergie durable
             </motion.h2>
+              <motion.p
+              className="text-base sm:text-lg text-muted-foreground"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+            >
+              Que vous soyez <strong className="text-foreground">particulier</strong> ou <strong className="text-foreground">entreprise</strong>, bénéficiez des{" "}
+              <strong className="text-foreground">aides et subventions suisses</strong> pour vos{" "}
+              <strong className="text-foreground">panneaux solaires</strong> ou votre{" "}
+              <strong className="text-foreground">pompe à chaleur</strong>. 
+              Faites un geste pour la planète tout en réduisant vos coûts énergétiques.
+            </motion.p>
 
             <motion.p
               className="text-base sm:text-lg text-muted-foreground"
@@ -181,7 +362,7 @@ export default function Index() {
           </section>
 
           {/* Form Section */}
-          <aside
+          <aside ref={formRef}
             id="form"
             className="bg-card p-6 sm:p-8 rounded-2xl shadow-xl border border-border sticky top-24"
           >
@@ -213,26 +394,26 @@ export default function Index() {
                     onChange={(e) => setForm({ ...form, projectType: e.target.value })}
                     className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="photovoltaic">Panneaux solaires</option>
-                    <option value="heatpump">Pompe à chaleur</option>
-                    <option value="both">Les deux</option>
+                    <option value="panneaux solaires">Panneaux solaires</option>
+                    <option value="pompe à chaleur">Pompe à chaleur</option>
+                    {/* <option value="les deux">Les deux</option> */}
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-foreground block mb-2">Canton</label>
+                  <label className="text-xs font-semibold text-foreground block mb-2">Code Postal</label>
                   <input
-                    value={form.canton}
-                    onChange={(e) => setForm({ ...form, canton: e.target.value })}
+                    value={form.codepostal}
+                    onChange={(e) => setForm({ ...form, codepostal: e.target.value })}
                     className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="ex: Vaud, Genève, Fribourg"
                   />
-                  {errors.canton && (
-                    <p className="text-destructive text-xs mt-1">{errors.canton}</p>
+                  {errors.codepostal && (
+                    <p className="text-destructive text-xs mt-1">{errors.codepostal}</p>
                   )}
                 </div>
 
-                <div>
+                {/* <div>
                   <label className="text-xs font-semibold text-foreground block mb-2">
                     Surface de toit / logement (m²)
                   </label>
@@ -242,10 +423,21 @@ export default function Index() {
                     className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     placeholder="Optionnel"
                   />
+                </div> */}
+
+                {/* description du projet (details) */}
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-2">Description du projet</label>
+                  <textarea
+                    value={form.details}
+                    onChange={(e) => setForm({ ...form, details: e.target.value })}
+                    className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="Décrivez votre projet en détail"
+                  />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-foreground block mb-2">Prénom</label>
+                  <label className="text-xs font-semibold text-foreground block mb-2">Nom</label>
                   <input
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -294,6 +486,11 @@ export default function Index() {
           </aside>
         </div>
       </main>
+
+      {/* Structured data for SEO */}
+      <script type="application/ld+json">
+        {JSON.stringify(ldJson)}
+      </script>
 
       {/* How it Works Section */}
       <section id="how" className="bg-accent/30 py-16 lg:py-20">
@@ -370,67 +567,18 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Subventions Section */}
+      {/* Subventions Section with Integrated Simulator */}
       <section id="subventions" className="py-16 lg:py-20 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5">
           <img src={heatPump} alt="" className="w-full h-full object-cover" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div
-            className="bg-gradient-to-br from-accent to-card p-8 sm:p-12 rounded-3xl shadow-2xl border border-border"
-            initial={{ y: 20, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            <h3 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Subventions & aides disponibles
-            </h3>
-            <p className="text-base text-muted-foreground mb-8">
-              Les aides varient selon le canton. Exemples :
-            </p>
+       
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              <div className="p-6 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-3xl mb-3">🏛️</div>
-                <h5 className="font-bold text-foreground mb-2">Aides cantonales</h5>
-                <p className="text-xs text-muted-foreground">
-                  Peuvent couvrir jusqu'à 20–30% du projet selon le canton.
-                </p>
-              </div>
-
-              <div className="p-6 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-3xl mb-3">🇨🇭</div>
-                <h5 className="font-bold text-foreground mb-2">Programmes fédéraux</h5>
-                <p className="text-xs text-muted-foreground">
-                  SuisseEnergie et autres primes pour l'efficacité énergétique.
-                </p>
-              </div>
-
-              <div className="p-6 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-3xl mb-3">♨️</div>
-                <h5 className="font-bold text-foreground mb-2">Primes pour pompes à chaleur</h5>
-                <p className="text-xs text-muted-foreground">
-                  Aides spécifiques pour remplacement de chaudières anciennes.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <a
-                href="#form"
-                className="inline-flex items-center justify-center bg-primary text-primary-foreground px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-[1.02]"
-              >
-                Vérifier mes aides
-              </a>
-              <a
-                href="#"
-                className="inline-flex items-center justify-center border-2 border-border bg-card px-6 py-3 rounded-xl font-semibold hover:bg-accent transition-colors"
-              >
-                En savoir plus
-              </a>
-            </div>
-          </motion.div>
-        </div>
+       
+      
+        {/* Integrated Simulator */}
+        <ImprovedSubventionsSection />
+        
       </section>
 
       {/* Testimonials Section */}
@@ -531,26 +679,29 @@ export default function Index() {
             </motion.blockquote>
           </div>
         </div>
-      </section>
 
-      {/* Footer */}
+        </section>
+
+     
+
       <footer className="bg-card border-t border-border py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:justify-between gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold">
-                  AH
+                <div className=" bg-gray-100 rounded-lg flex items-center justify-center text-primary-foreground font-bold">
+                  <img src="/logo_footer.png" alt="Logo Comparatifdevis" className="w-auto h-24 rounded-lg" />
                 </div>
-                <strong className="text-lg text-foreground">AH Digital</strong>
+                
               </div>
+              <strong className="text-lg text-green-600">Comparatifdevis.ch</strong>
               <p className="text-sm text-muted-foreground">
                 Service de mise en relation — prestation gratuite
               </p>
             </div>
             <div className="flex flex-wrap gap-6 text-sm">
               <a className="text-muted-foreground hover:text-foreground transition-colors" href="#">
-                Mentions légales
+                Avenue de Tivoli 19bis – 1007 Lausanne
               </a>
               <a className="text-muted-foreground hover:text-foreground transition-colors" href="#">
                 Politique de confidentialité
@@ -562,7 +713,7 @@ export default function Index() {
           </div>
           <p className="text-xs text-muted-foreground border-t border-border pt-6">
             Les montants et aides indiqués sont à titre indicatif. Les aides réelles dépendent du
-            canton et de la situation du demandeur.
+            codepostal et de la situation du demandeur.
           </p>
         </div>
       </footer>
