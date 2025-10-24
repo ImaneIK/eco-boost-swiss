@@ -1,0 +1,10 @@
+filename,alt_text,og_image_url,suggested_caption
+public/favicon.ico,Devis subventionnés favicon,/favicon.ico,Logo minimal pour Devis subventionnés
+public/placeholder.svg,Image de placeholder générique,/placeholder.svg,Image de remplacement
+public/logo.png,Réseau d'installateurs partenaires,/logo.png,Réseau d'experts et installateurs
+src/assets/solar-panels.jpg,Panneaux solaires installés chez un client,/src/assets/solar-panels.jpg,Solutions solaires pour entreprises
+src/assets/hero-solar.jpg,Panneaux solaires sur toit moderne - QuoteFlow,/src/assets/hero-solar.jpg,Optimisez vos projets solaires
+src/assets/savings.jpg,Économies d'énergie après installation,/src/assets/savings.jpg,Réduction des coûts énergétiques
+src/assets/installation.jpg,Technicien en cours d'installation solaire,/src/assets/installation.jpg,Installation professionnelle et garantie
+src/assets/heat-pump.jpg,Pompe à chaleur installée pour chauffage durable,/src/assets/heat-pump.jpg,Chauffage écologique pour entreprises
+src/assets/happy-family.jpg,Famille satisfaite après installation énergétique,/src/assets/happy-family.jpg,Clients satisfaits et retours positifs
