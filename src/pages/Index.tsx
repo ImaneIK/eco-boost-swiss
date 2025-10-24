@@ -138,7 +138,7 @@ export default function Index() {
       
       // Optional: Redirect after delay
       setTimeout(() => {
-        navigate('/'); // Adjust path as needed
+        navigate('/dashboard'); // Adjust path as needed
       }, 2000);
       
       alert('Devis envoyés avec succès ! Vous recevrez une réponse sous 24h.');
@@ -444,11 +444,236 @@ export default function Index() {
         </div>
       </main>
 
-      {/* Rest of your sections (How it Works, Subventions, Testimonials, Footer) - unchanged */}
-      {/* ... (paste the rest of your JSX here) */}
-
       {/* Structured data for SEO */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ldJson) }} />
+      <script type="application/ld+json">
+        {JSON.stringify(ldJson)}
+      </script>
+
+      {/* How it Works Section */}
+      <section id="how" className="bg-accent/30 py-16 lg:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.h3
+            className="text-3xl sm:text-4xl font-bold text-center text-foreground mb-12"
+            initial={{ y: 20, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            Comment ça marche ?
+          </motion.h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <motion.div
+              className="bg-card p-8 rounded-2xl shadow-lg border border-border hover:shadow-xl transition-all"
+              initial={{ y: 20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="mb-6 rounded-xl overflow-hidden">
+                <img src={solarPanels} alt="Panneaux solaires" className="w-full h-48 object-cover" />
+              </div>
+              <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-2xl font-bold mb-4">
+                1
+              </div>
+              <h4 className="text-xl font-bold text-foreground mb-3">Décrivez votre projet</h4>
+              <p className="text-sm text-muted-foreground">
+                Dites-nous quel projet : panneaux solaires ou pompe à chaleur. Plus de détails =
+                devis plus précis.
+              </p>
+            </motion.div>
+
+            <motion.div
+              className="bg-card p-8 rounded-2xl shadow-lg border border-border hover:shadow-xl transition-all"
+              initial={{ y: 20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="mb-6 rounded-xl overflow-hidden">
+                <img src={installation} alt="Installation professionnelle" className="w-full h-48 object-cover" />
+              </div>
+              <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-2xl font-bold mb-4">
+                2
+              </div>
+              <h4 className="text-xl font-bold text-foreground mb-3">Nous sélectionnons</h4>
+              <p className="text-sm text-muted-foreground">
+                3 à 4 prestataires certifiés et qualifiés près de chez vous.
+              </p>
+            </motion.div>
+
+            <motion.div
+              className="bg-card p-8 rounded-2xl shadow-lg border border-border hover:shadow-xl transition-all"
+              initial={{ y: 20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="mb-6 rounded-xl overflow-hidden">
+                <img src={savings} alt="Économies" className="w-full h-48 object-cover" />
+              </div>
+              <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-2xl font-bold mb-4">
+                3
+              </div>
+              <h4 className="text-xl font-bold text-foreground mb-3">Comparez & économisez</h4>
+              <p className="text-sm text-muted-foreground">
+                Recevez les devis sous 48h et découvrez quelles aides s'appliquent pour réduire le
+                coût final.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Subventions Section with Integrated Simulator */}
+      <section id="subventions" className="py-16 lg:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5">
+          <img src={heatPump} alt="" className="w-full h-full object-cover" />
+        </div>
+       
+
+       
+      
+        {/* Integrated Simulator */}
+        <ImprovedSubventionsSection />
+        
+      </section>
+
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-16 lg:py-20 bg-accent/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.h3
+            className="text-3xl sm:text-4xl font-bold text-center text-foreground mb-4"
+            initial={{ y: 20, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            Ils ont économisé — témoignages
+          </motion.h3>
+          <motion.p
+            className="text-center text-muted-foreground mb-12"
+            initial={{ y: 20, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+          >
+            Des milliers de Suisses romands ont déjà fait confiance à notre service
+          </motion.p>
+
+          <div className="mb-12 rounded-2xl overflow-hidden shadow-xl">
+            <img src={happyFamily} alt="Famille heureuse" className="w-full h-80 object-cover" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <motion.blockquote
+              className="bg-card p-8 rounded-2xl shadow-lg border border-border hover:shadow-xl transition-all"
+              initial={{ y: 20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="text-primary text-4xl mb-4">"</div>
+              <p className="text-muted-foreground mb-6">
+                "Grâce à ce service, j'ai reçu 4 devis pour mon installation solaire à Lausanne.
+                J'ai économisé <strong className="text-foreground">12 000 CHF</strong> grâce aux
+                subventions !"
+              </p>
+              <footer className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold">
+                  M
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Marc</div>
+                  <div className="text-xs text-muted-foreground">Lausanne</div>
+                </div>
+              </footer>
+            </motion.blockquote>
+
+            <motion.blockquote
+              className="bg-card p-8 rounded-2xl shadow-lg border border-border hover:shadow-xl transition-all"
+              initial={{ y: 20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="text-primary text-4xl mb-4">"</div>
+              <p className="text-muted-foreground mb-6">
+                "J'ai remplacé ma vieille chaudière par une pompe à chaleur. Entre les aides
+                cantonales et la prime, j'ai couvert plus de{" "}
+                <strong className="text-foreground">40%</strong> des frais."
+              </p>
+              <footer className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold">
+                  C
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Claire</div>
+                  <div className="text-xs text-muted-foreground">Genève</div>
+                </div>
+              </footer>
+            </motion.blockquote>
+
+            <motion.blockquote
+              className="bg-card p-8 rounded-2xl shadow-lg border border-border hover:shadow-xl transition-all"
+              initial={{ y: 20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="text-primary text-4xl mb-4">"</div>
+              <p className="text-muted-foreground mb-6">
+                "Tout a été simple : j'ai rempli le formulaire, j'ai reçu mes devis, et choisi le
+                meilleur en 3 jours."
+              </p>
+              <footer className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold">
+                  T
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Thomas</div>
+                  <div className="text-xs text-muted-foreground">Fribourg</div>
+                </div>
+              </footer>
+            </motion.blockquote>
+          </div>
+        </div>
+
+        </section>
+
+     
+
+      <footer className="bg-card border-t border-border py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:justify-between gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className=" bg-gray-100 rounded-lg flex items-center justify-center text-primary-foreground font-bold">
+                  <img src="/logo_footer.png" alt="Logo Comparatifdevis" className="w-auto h-24 rounded-lg" />
+                </div>
+                
+              </div>
+              <strong className="text-lg text-green-600">Comparatifdevis.ch</strong>
+              <p className="text-sm text-muted-foreground">
+                Service de mise en relation — prestation gratuite
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-6 text-sm">
+              <a className="text-muted-foreground hover:text-foreground transition-colors" href="#">
+                Avenue de Tivoli 19bis – 1007 Lausanne
+              </a>
+              <a className="text-muted-foreground hover:text-foreground transition-colors" href="#">
+                Politique de confidentialité
+              </a>
+              <a className="text-muted-foreground hover:text-foreground transition-colors" href="#">
+                Contact
+              </a>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground border-t border-border pt-6">
+            Les montants et aides indiqués sont à titre indicatif. Les aides réelles dépendent du
+            codepostal et de la situation du demandeur.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
