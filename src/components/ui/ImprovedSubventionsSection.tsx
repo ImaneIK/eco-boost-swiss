@@ -14,6 +14,10 @@ const ImprovedSubventionsSection = () => {
     power: '',
     pacType: 'air-eau',
     ownerStatus: 'owner',
+    installationType: '',
+    serviceYear: '2025',
+    hasCECB: false,
+    autoconsommation: '',
     fullname: '',
     email: '',
     phone: ''
@@ -27,7 +31,7 @@ const ImprovedSubventionsSection = () => {
     notes: ''
   });
 
-  // Données réelles basées sur le tutoriel (Romandie only: remove BE, ZH)
+  // Updated DATA for 2025 based on current subsidies
   const DATA = {
     cantons: {
       GE: {
@@ -43,21 +47,21 @@ const ImprovedSubventionsSection = () => {
         cecb_bonus_max: 1000,
         fossil_replacement_bonus: 1500,
         communal_bonus_percent: [25, 40],
-        conditions: "Demande avant travaux; CECB recommandé"
+        conditions: "Demande avant travaux; CECB recommandé; Prime SIG reconduite"
       },
       VD: {
         pv_chf_per_kwc_min: 200,
         pv_chf_per_kwc_max: 350,
         pv_prime_max: 6000,
-        pac_air_eau_base: 5000,
-        pac_air_eau_per_kw: 400,
-        pac_sol_eau_base: 6000,
-        pac_sol_eau_per_kw: 600,
+        pac_air_eau_base: 8000,
+        pac_air_eau_per_kw: 0,
+        pac_sol_eau_base: 10000,
+        pac_sol_eau_per_kw: 0,
         isolation_chf_per_m2: 60,
         cecb_bonus: 750,
         fossil_replacement_bonus: 1500,
         communal_bonus_percent: [20, 30],
-        conditions: "Programme Bâtiments VD; CECB requis"
+        conditions: "Programme Bâtiments VD; CECB requis; jusqu'à CHF 8'000 pour PAC air-eau"
       },
       VS: {
         pv_chf_per_kwc_min: 250,
@@ -71,55 +75,55 @@ const ImprovedSubventionsSection = () => {
         cecb_bonus: 500,
         fossil_replacement_bonus: 2000,
         communal_bonus_percent: [30, 40],
-        conditions: "Remplacement d’énergie fossile priorisé"
+        conditions: "Remplacement d’énergie fossile priorisé; CHF 9'000 pour PAC air-eau"
       },
       FR: {
         pv_chf_per_kwc_min: 200,
         pv_chf_per_kwc_max: 350,
         pv_prime_max: 5000,
-        pac_air_eau_base: 7000,
-        pac_air_eau_per_kw: 0,
+        pac_air_eau_base: 3500,
+        pac_air_eau_per_kw: 150,
         pac_sol_eau_base: 8000,
         pac_sol_eau_per_kw: 0,
         isolation_chf_per_m2: 60,
         cecb_bonus: 700,
         fossil_replacement_bonus: 1000,
         communal_bonus_percent: [25, 25],
-        conditions: "CECB obligatoire pour rénovation"
+        conditions: "CECB obligatoire pour rénovation; CHF 3'500 + CHF 150/kW pour PAC air-eau"
       },
       NE: {
         pv_chf_per_kwc_min: 180,
         pv_chf_per_kwc_max: 300,
         pv_prime_max: 4500,
-        pac_air_eau_base: 4000,
-        pac_air_eau_per_kw: 0,
+        pac_air_eau_base: 3500,
+        pac_air_eau_per_kw: 150,
         pac_sol_eau_base: 5000,
         pac_sol_eau_per_kw: 0,
         isolation_chf_per_m2: 50,
         cecb_bonus: 500,
         fossil_replacement_bonus: 1000,
         communal_bonus_percent: [20, 25],
-        conditions: "CECB Plus recommandé"
+        conditions: "CECB Plus recommandé; CHF 3'500 + CHF 150/kW pour PAC air-eau"
       },
       JU: {
         pv_chf_per_kwc_min: 200,
         pv_chf_per_kwc_max: 300,
         pv_prime_max: 4000,
-        pac_air_eau_base: 5000,
-        pac_air_eau_per_kw: 0,
+        pac_air_eau_base: 2500,
+        pac_air_eau_per_kw: 100,
         pac_sol_eau_base: 6500,
         pac_sol_eau_per_kw: 0,
         isolation_chf_per_m2: 45,
         cecb_bonus: 500,
         fossil_replacement_bonus: 1000,
         communal_bonus_percent: [20, 25],
-        conditions: "Soumission avant travaux"
+        conditions: "Soumission avant travaux; CHF 2'500 + CHF 100/kW pour PAC air-eau"
       }
     },
     federal: {
       pronovo_pru_per_kwc_estimate_min: 200,
       pronovo_pru_per_kwc_estimate_max: 600,
-      programme_batiments_support_estimated: "variable selon dossier"
+      programme_batiments_support_estimated: "variable selon dossier; up to 30% investment"
     }
   };
 
@@ -240,17 +244,35 @@ const ImprovedSubventionsSection = () => {
     return min || max;
   };
 
-  // Calcul PV
-  const calculatePV = (cantonCode, kwc) => {
+  // Enhanced Calcul PV with new inputs
+  const calculatePV = (cantonCode, kwc, installationType = '', hasCECB = false, autoconsommation = 0, serviceYear = 2025) => {
+    let reduction = 1;
+    if (serviceYear > 2025) {
+      reduction = 1 - (serviceYear - 2025) * 0.05; // Assume 5% reduction per year
+    }
     const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
-    const pv_rate_min = c.pv_chf_per_kwc_min;
-    const pv_rate_max = c.pv_chf_per_kwc_max;
-    const pv_rate = chooseWithin(pv_rate_min, pv_rate_max);
+    let pv_rate_min = c.pv_chf_per_kwc_min;
+    let pv_rate_max = c.pv_chf_per_kwc_max;
+    if (installationType === 'integre') {
+      pv_rate_max += 100; // Bonus for integrated
+    } else if (installationType === 'toit-plat') {
+      pv_rate_min -= 50; // Adjustment for flat roof
+    }
+    const pv_rate = chooseWithin(pv_rate_min * reduction, pv_rate_max * reduction);
     const estimated_cost_offset = Math.round(pv_rate * kwc);
     const prime = Math.min(c.pv_prime_max || 0, estimated_cost_offset);
-    const federal_min = DATA.federal.pronovo_pru_per_kwc_estimate_min * kwc;
-    const federal_max = DATA.federal.pronovo_pru_per_kwc_estimate_max * kwc;
+    const federal_min = DATA.federal.pronovo_pru_per_kwc_estimate_min * kwc * reduction;
+    const federal_max = DATA.federal.pronovo_pru_per_kwc_estimate_max * kwc * reduction;
     const federal_estimate = Math.round((federal_min + federal_max) / 2);
+
+    let total_pv_subvention_estimated = prime + federal_estimate;
+    if (hasCECB) {
+      const cecb_bonus = c.cecb_bonus ? c.cecb_bonus : avgRange([c.cecb_bonus_min, c.cecb_bonus_max]);
+      total_pv_subvention_estimated += cecb_bonus;
+    }
+    if (autoconsommation > 30) {
+      total_pv_subvention_estimated += Math.round(prime * 0.1); // 10% bonus for high self-consumption
+    }
 
     return {
       kwc,
@@ -258,14 +280,14 @@ const ImprovedSubventionsSection = () => {
       estimated_offset_chf: estimated_cost_offset,
       prime_cantonale_chf: prime,
       federal_pronovo_estimate_chf: federal_estimate,
-      total_pv_subvention_estimated: prime + federal_estimate
+      total_pv_subvention_estimated
     };
   };
 
-  // Calcul PAC
+  // Calcul PAC (unchanged)
   const calculatePAC = (cantonCode, type, kw, isFossil = false) => {
     const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
-    const result: any = { type };
+    const result : any = { type };
 
     let base, per_kw;
     if (type === 'air-eau') {
@@ -331,174 +353,193 @@ const ImprovedSubventionsSection = () => {
     setCurrentStep(step);
   };
 
-const handleSubmit = (e) => {
-  e.preventDefault();
-  
-  // Step 1: Validate and sanitize formData to control empty/undefined values
-  const data : Record<string, any> = { ...formData }; // Clone to avoid mutating original
-  
-  // Sanitize: Ensure all keys exist, trim strings, set safe defaults
-  const sanitizedData = {
-    projectType: (data.projectType || '').trim() || 'pv', // Default to 'pv' if empty
-    canton: (data.canton || '').trim() || 'VD', // Default canton
-    postal: (data.postal || '').trim(),
-    postalCity: (data.postalCity || '').trim(),
-    buildingType: (data.buildingType || '').trim() || 'house', // Default building type
-    currentSystem: (data.currentSystem || '').trim() || 'none', // Default system
-    power: parseFloat((data.power || '0').trim()) || (data.projectType === 'pv' ? 10 : 12), // Already has fallback, but ensure non-negative
-    pacType: (data.pacType || '').trim() || 'air-eau', // Default PAC type if empty
-    ownerStatus: (data.ownerStatus || '').trim() || 'owner', // Default status
-    fullname: (data.fullname || '').trim(),
-    email: (data.email || '').trim().toLowerCase(), // Normalize email
-    phone: (data.phone || '').trim().replace(/\D/g, ''), // Strip non-digits for phone
-  };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Step 1: Validate and sanitize formData to control empty/undefined values
+    const data : any = { ...formData }; // Clone to avoid mutating original
+    
+    // Sanitize: Ensure all keys exist, trim strings, set safe defaults
+    const sanitizedData = {
+      projectType: (data.projectType || '').trim() || 'pv', // Default to 'pv' if empty
+      canton: (data.canton || '').trim() || 'VD', // Default canton
+      postal: (data.postal || '').trim(),
+      postalCity: (data.postalCity || '').trim(),
+      buildingType: (data.buildingType || '').trim() || 'house', // Default building type
+      currentSystem: (data.currentSystem || '').trim() || 'none', // Default system
+      power: parseFloat((data.power || '0').trim()) || (data.projectType === 'pv' ? 10 : 12), // Already has fallback, but ensure non-negative
+      pacType: (data.pacType || '').trim() || 'air-eau', // Default PAC type if empty
+      ownerStatus: (data.ownerStatus || '').trim() || 'owner', // Default status
+      installationType: (data.installationType || '').trim() || '',
+      serviceYear: (data.serviceYear || '').trim() || '2025',
+      hasCECB: !!data.hasCECB, // Boolean
+      autoconsommation: parseFloat((data.autoconsommation || '0').trim()) || 0,
+      fullname: (data.fullname || '').trim(),
+      email: (data.email || '').trim().toLowerCase(), // Normalize email
+      phone: (data.phone || '').trim().replace(/\D/g, ''), // Strip non-digits for phone
+    };
 
-  // Early validation: Check required fields (prevent submit with empties)
-  const requiredFields = ['fullname', 'email', 'phone', 'canton'];
-  const missingFields = requiredFields.filter(field => !sanitizedData[field]);
-  if (missingFields.length > 0) {
-    console.warn('Missing required fields:', missingFields); // Or set errors state
-    alert(`Veuillez remplir: ${missingFields.join(', ')}`);
-    return;
-  }
+    // Early validation: Check required fields (prevent submit with empties)
+    const requiredFields = ['fullname', 'email', 'phone', 'canton'];
+    const missingFields = requiredFields.filter(field => !sanitizedData[field]);
+    if (missingFields.length > 0) {
+      console.warn('Missing required fields:', missingFields); // Or set errors state
+      alert(`Veuillez remplir: ${missingFields.join(', ')}`);
+      return;
+    }
 
-  // Validate email/phone basics (expand as needed)
-  if (!/\S+@\S+\.\S+/.test(sanitizedData.email)) {
-    alert('Email invalide');
-    return;
-  }
-  if (sanitizedData.phone.length < 10) {
-    alert('Numéro de téléphone trop court');
-    return;
-  }
+    // Validate email/phone basics (expand as needed)
+    if (!/\S+@\S+\.\S+/.test(sanitizedData.email)) {
+      alert('Email invalide');
+      return;
+    }
+    if (sanitizedData.phone.length < 10) {
+      alert('Numéro de téléphone trop court');
+      return;
+    }
 
-  // Step 2: Calculations with sanitized data (safer now)
-  const effectiveCanton = sanitizedData.canton;
-  const c = DATA.cantons[effectiveCanton] || DATA.cantons.VD;
-  const project = sanitizedData.projectType;
-  const isFossil = sanitizedData.currentSystem === 'fuel' || sanitizedData.currentSystem === 'gas';
+    // Step 2: Calculations with sanitized data (safer now)
+    const effectiveCanton = sanitizedData.canton;
+    const c = DATA.cantons[effectiveCanton] || DATA.cantons.VD;
+    const project = sanitizedData.projectType;
+    const isFossil = sanitizedData.currentSystem === 'fuel' || sanitizedData.currentSystem === 'gas';
 
-  let pv = null;
-  let hp = null;
-  let subtotal = 0;
+    let pv = null;
+    let hp = null;
+    let subtotal = 0;
 
-  if (project === 'pv' || project === 'both') {
-    pv = calculatePV(effectiveCanton, sanitizedData.power);
-    subtotal += pv.total_pv_subvention_estimated || 0; // Fallback to 0 if calc returns null
-  }
+    if (project === 'pv' || project === 'both') {
+      pv = calculatePV(
+        effectiveCanton, 
+        sanitizedData.power, 
+        sanitizedData.installationType, 
+        sanitizedData.hasCECB, 
+        sanitizedData.autoconsommation, 
+        parseInt(sanitizedData.serviceYear)
+      );
+      subtotal += pv.total_pv_subvention_estimated || 0; // Fallback to 0 if calc returns null
+    }
 
-  if (project === 'hp' || project === 'both') {
-    hp = calculatePAC(effectiveCanton, sanitizedData.pacType, sanitizedData.power, isFossil);
-    subtotal += hp.total_estimated || 0;
-  }
+    if (project === 'hp' || project === 'both') {
+      hp = calculatePAC(effectiveCanton, sanitizedData.pacType, sanitizedData.power, isFossil);
+      subtotal += hp.total_estimated || 0;
+    }
 
-  const communal = applyCommunalBonus(effectiveCanton, subtotal);
-  const total = communal.total_with_commune || 0;
-  const notes = c.conditions || 'Aucune note disponible';
+    const communal = applyCommunalBonus(effectiveCanton, subtotal);
+    const total = communal.total_with_commune || 0;
+    const notes = c.conditions || 'Aucune note disponible';
 
-  const pvAid = pv ? pv.total_pv_subvention_estimated : 0;
-  const hpAid = hp ? hp.total_estimated : 0;
+    const pvAid = pv ? pv.total_pv_subvention_estimated : 0;
+    const hpAid = hp ? hp.total_estimated : 0;
 
-  setSimulatorResult({ 
-    pvAid, 
-    hpAid, 
-    communal: communal.communal_bonus || 0, 
-    total, 
-    notes 
-  });
-  setShowResult(true);
-
-  // Step 3: Prepare payload with no empties (all values are now defined)
-  const payload = {
-    mode: 'simulator',
-    submittedAt: new Date().toISOString(),
-    project: project,
-    canton: effectiveCanton,
-    postal: sanitizedData.postal || 'Non spécifié',
-    postalCity: sanitizedData.postalCity || 'Non spécifié',
-    buildingType: sanitizedData.buildingType,
-    currentSystem: sanitizedData.currentSystem,
-    power: sanitizedData.power,
-    pacType: sanitizedData.pacType,
-    ownerStatus: sanitizedData.ownerStatus,
-    fullname: sanitizedData.fullname,
-    email: sanitizedData.email,
-    phone: sanitizedData.phone,
-    pvAid,
-    hpAid,
-    communal: communal.communal_bonus || 0,
-    total,
-    notes
-  };
-
-  // Step 4: Send to n8n webhook (with error handling)
-  const webhookURL = import.meta.env.VITE_N8N_API_URL;
-  if (webhookURL) {
-    fetch(webhookURL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    })
-    .then(response => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      console.log('n8n webhook sent successfully');
-    })
-    .catch(error => {
-      console.error("Erreur d’envoi vers n8n :", error);
+    setSimulatorResult({ 
+      pvAid, 
+      hpAid, 
+      communal: communal.communal_bonus || 0, 
+      total, 
+      notes 
     });
-  }
+    setShowResult(true);
 
-  // Step 5: Send email via EmailJS (with fallbacks for empty results)
-  const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-  const emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_SIMULATOR;
-  const emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-
-  if (emailjsServiceId && emailjsTemplateId && emailjsPublicKey) {
-    const formattedDate = new Date().toLocaleString('fr-CH', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    }).replace(/\//g, '.');
-
-    const formattedPvAid = pvAid.toLocaleString('fr-CH');
-    const formattedHpAid = hpAid.toLocaleString('fr-CH');
-    const formattedCommunal = (communal.communal_bonus || 0).toLocaleString('fr-CH');
-    const formattedTotal = total.toLocaleString('fr-CH');
-
-    const emailParams = {
-      fullname: sanitizedData.fullname || 'Anonyme',
-      email: sanitizedData.email,
-      phone: sanitizedData.phone || 'Non fourni',
+    // Step 3: Prepare payload with no empties (all values are now defined)
+    const payload = {
+      mode: 'simulator',
+      submittedAt: new Date().toISOString(),
       project: project,
       canton: effectiveCanton,
       postal: sanitizedData.postal || 'Non spécifié',
-      postalCity: sanitizedData.postalCity || 'Non spécifiée',
+      postalCity: sanitizedData.postalCity || 'Non spécifié',
       buildingType: sanitizedData.buildingType,
       currentSystem: sanitizedData.currentSystem,
       power: sanitizedData.power,
       pacType: sanitizedData.pacType,
       ownerStatus: sanitizedData.ownerStatus,
-      submittedAt: formattedDate,
-      pvAid: formattedPvAid,
-      hpAid: formattedHpAid,
-      communal: formattedCommunal,
-      total: formattedTotal,
-      notes: notes || 'Aucune note'
+      installationType: sanitizedData.installationType,
+      serviceYear: sanitizedData.serviceYear,
+      hasCECB: sanitizedData.hasCECB,
+      autoconsommation: sanitizedData.autoconsommation,
+      fullname: sanitizedData.fullname,
+      email: sanitizedData.email,
+      phone: sanitizedData.phone,
+      pvAid,
+      hpAid,
+      communal: communal.communal_bonus || 0,
+      total,
+      notes
     };
 
-    emailjs.send(emailjsServiceId, emailjsTemplateId, emailParams, emailjsPublicKey)
-      .then((response) => {
-        console.log('Email sent successfully:', response.status, response.text);
+    // Step 4: Send to n8n webhook (with error handling)
+    const webhookURL = import.meta.env.VITE_N8N_API_URL;
+    if (webhookURL) {
+      fetch(webhookURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       })
-      .catch((error) => {
-        console.error('Email send error:', error);
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        console.log('n8n webhook sent successfully');
+      })
+      .catch(error => {
+        console.error("Erreur d’envoi vers n8n :", error);
       });
-  } else {
-    console.warn('EmailJS env vars missing—email not sent');
-  }
-};
+    }
+
+    // Step 5: Send email via EmailJS (with fallbacks for empty results)
+    const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+    const emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_SIMULATOR;
+    const emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+    if (emailjsServiceId && emailjsTemplateId && emailjsPublicKey) {
+      const formattedDate = new Date().toLocaleString('fr-CH', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }).replace(/\//g, '.');
+
+      const formattedPvAid = pvAid.toLocaleString('fr-CH');
+      const formattedHpAid = hpAid.toLocaleString('fr-CH');
+      const formattedCommunal = (communal.communal_bonus || 0).toLocaleString('fr-CH');
+      const formattedTotal = total.toLocaleString('fr-CH');
+
+      const emailParams = {
+        fullname: sanitizedData.fullname || 'Anonyme',
+        email: sanitizedData.email,
+        phone: sanitizedData.phone || 'Non fourni',
+        project: project,
+        canton: effectiveCanton,
+        postal: sanitizedData.postal || 'Non spécifié',
+        postalCity: sanitizedData.postalCity || 'Non spécifiée',
+        buildingType: sanitizedData.buildingType,
+        currentSystem: sanitizedData.currentSystem,
+        power: sanitizedData.power,
+        pacType: sanitizedData.pacType,
+        ownerStatus: sanitizedData.ownerStatus,
+        installationType: sanitizedData.installationType || 'Non spécifié',
+        serviceYear: sanitizedData.serviceYear,
+        hasCECB: sanitizedData.hasCECB ? 'Oui' : 'Non',
+        autoconsommation: sanitizedData.autoconsommation || 'Non spécifié',
+        submittedAt: formattedDate,
+        pvAid: formattedPvAid,
+        hpAid: formattedHpAid,
+        communal: formattedCommunal,
+        total: formattedTotal,
+        notes: notes || 'Aucune note'
+      };
+
+      emailjs.send(emailjsServiceId, emailjsTemplateId, emailParams, emailjsPublicKey)
+        .then((response) => {
+          console.log('Email sent successfully:', response.status, response.text);
+        })
+        .catch((error) => {
+          console.error('Email send error:', error);
+        });
+    } else {
+      console.warn('EmailJS env vars missing—email not sent');
+    }
+  };
 
   const handleDownloadPDF = () => {
     const printContent = `
@@ -534,6 +575,7 @@ const handleSubmit = (e) => {
             <p>comparatifdevis.ch - Rapport généré le ${new Date().toLocaleDateString('fr-CH')}</p>
             <p>Projet: ${formData.projectType}, Puissance: ${formData.power || 'Estimation'}, Système actuel: ${formData.currentSystem}</p>
             <p>Contact: ${formData.fullname} - ${formData.email} - Code postal: ${formData.postal || 'Non spécifié'}</p>
+            <p>Type d'installation: ${formData.installationType || 'Non spécifié'}, Année: ${formData.serviceYear}, CECB: ${formData.hasCECB ? 'Oui' : 'Non'}, Autoconsommation: ${formData.autoconsommation || 'Non spécifié'}%</p>
           </footer>
         </body>
       </html>
@@ -674,8 +716,9 @@ const handleSubmit = (e) => {
                     >
                       Lancer la simulation
                     </button>
+
                     <a 
-                      href="/contact" 
+                      href="mailto:contact@comparatifdevis.ch" 
                       style={{ 
                         background: 'transparent', 
                         border: '1px solid #d1fae5', 
@@ -878,11 +921,13 @@ const handleSubmit = (e) => {
                               </>
                             )}
 
-                            <label className="block mt-3 font-semibold text-green-800 text-sm">Surface de toiture</label>
+                            <label className="block mt-3 font-semibold text-green-800 text-sm">
+                              {formData.projectType === 'pv' ? 'Puissance installée (kWc)' : 'Puissance de la PAC (kW)'}
+                            </label>
                             <input
                               type="number"
                               name="power"
-                              placeholder="en m² (ex: 10)"
+                              placeholder={formData.projectType === 'pv' ? "ex: 10" : "ex: 12"}
                               min="0"
                               step="0.1"
                               value={formData.power}
@@ -890,8 +935,62 @@ const handleSubmit = (e) => {
                               className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
                             />
                             <p className="text-xs text-green-600 mt-1.5 block">
-                              Si vous ne connaissez pas la puissance, choisissez une estimation: petite 5 kW, moyenne 10 kW, grande 20 kW+
+                              {formData.projectType === 'pv' ? 'Puissance en kWc (ex: petite installation 5 kWc, moyenne 10 kWc, grande 20 kWc+)' : 'Puissance en kW (ex: petite 8 kW, moyenne 12 kW, grande 20 kW+)'}
                             </p>
+
+                            {(formData.projectType === 'pv' || formData.projectType === 'both') && (
+                              <>
+                                <label className="block mt-3 font-semibold text-green-800 text-sm">Type d’installation</label>
+                                <select
+                                  name="installationType"
+                                  value={formData.installationType}
+                                  onChange={(e) => handleChange('installationType', e.target.value)}
+                                  className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
+                                >
+                                  <option value="">Sélectionner...</option>
+                                  <option value="toit-incline">Toit incliné</option>
+                                  <option value="toit-plat">Toit plat</option>
+                                  <option value="integre">Intégré au bâtiment</option>
+                                  <option value="autre">Autre</option>
+                                </select>
+
+                                <label className="block mt-3 font-semibold text-green-800 text-sm">Autoconsommation prévue (%)</label>
+                                <input
+                                  type="number"
+                                  name="autoconsommation"
+                                  placeholder="ex: 30"
+                                  min="0"
+                                  max="100"
+                                  value={formData.autoconsommation}
+                                  onChange={(e) => handleChange('autoconsommation', e.target.value)}
+                                  className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
+                                />
+                              </>
+                            )}
+
+                            <label className="block mt-3 font-semibold text-green-800 text-sm">Année de mise en service</label>
+                            <select
+                              name="serviceYear"
+                              value={formData.serviceYear}
+                              onChange={(e) => handleChange('serviceYear', e.target.value)}
+                              className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
+                            >
+                              <option value="2025">2025</option>
+                              <option value="2026">2026</option>
+                              <option value="2027">2027</option>
+                            </select>
+
+                            <label className="block mt-3 font-semibold text-green-800 text-sm">CECB / Certificat énergétique</label>
+                            <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer mt-1.5">
+                              <input
+                                type="checkbox"
+                                name="hasCECB"
+                                className="mr-2"
+                                checked={formData.hasCECB}
+                                onChange={(e) => handleChange('hasCECB', e.target.checked)}
+                              />
+                              Oui, certificat disponible
+                            </label>
 
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Vous êtes :</label>
                             <select
@@ -960,17 +1059,17 @@ const handleSubmit = (e) => {
                               className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
                             />
 
-                            <div className="mt-3 flex justify-between">
+                            <div className="mt-3 flex flex-col lg:flex-row gap-1 justify-between">
                               <button
                                 type="button"
-                                className="px-4 py-2.5 rounded-lg border border-gray-300 bg-white font-bold"
+                                className="block flex-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white font-bold"
                                 onClick={() => handlePrev(3)}
                               >
                                 ← Précédent
                               </button>
                               <button
                                 type="submit"
-                                className="px-4 py-2.5 rounded-lg bg-green-500 text-gray-900 font-bold"
+                                className="block flex-1  px-4 py-2.5 rounded-lg bg-green-500 text-gray-900 font-bold"
                               >
                                 Obtenir mon estimation ✅
                               </button>
@@ -1006,17 +1105,17 @@ const handleSubmit = (e) => {
                         </p>
                         <ul className="space-y-1">
                           {simulatorResult.pvAid > 0 && (
-                            <li>🔆 Panneaux solaires : <strong>CHF {simulatorResult.pvAid.toLocaleString()}</strong></li>
+                            <li>🔆 Panneaux solaires : <strong>CHF {simulatorResult.pvAid.toLocaleString('fr-CH')}</strong></li>
                           )}
                           {simulatorResult.hpAid > 0 && (
-                            <li>🔥 Pompe à chaleur : <strong>CHF {simulatorResult.hpAid.toLocaleString()}</strong></li>
+                            <li>🔥 Pompe à chaleur : <strong>CHF {simulatorResult.hpAid.toLocaleString('fr-CH')}</strong></li>
                           )}
                           {simulatorResult.communal > 0 && (
-                            <li>🏘️ Prime communale estimée : <strong>CHF {simulatorResult.communal.toLocaleString()}</strong></li>
+                            <li>🏘️ Prime communale estimée : <strong>CHF {simulatorResult.communal.toLocaleString('fr-CH')}</strong></li>
                           )}
                         </ul>
                         <p className="font-bold text-lg mt-2">
-                          Total estimé : CHF {simulatorResult.total.toLocaleString()}
+                          Total estimé : CHF {simulatorResult.total.toLocaleString('fr-CH')}
                         </p>
                         <p className="my-1.5 text-sm">
                           Ce résultat est indicatif. Un conseiller vérifiera les primes exactes (communes, conditions techniques, certificats).
@@ -1028,13 +1127,13 @@ const handleSubmit = (e) => {
                         )}
                       </div>
 
-                      <div className="mt-3 flex gap-2">
-                        <a href="tel:+41211234567" className="px-4 py-2.5 rounded-lg bg-green-500 text-gray-900 font-bold flex-1 text-center">
+                      <div className="mt-3 flex flex-col lg:flex-row gap-2">
+                        <a href="tel:+41211234567" className="block flex-1 px-4 py-2.5 rounded-lg bg-green-500 text-gray-900 font-bold flex-1 text-center">
                           Réserver un appel
                         </a>
                         <button
                           onClick={handleDownloadPDF}
-                          className="px-4 py-2.5 rounded-lg border border-gray-300 bg-white font-bold flex-1 text-center"
+                          className="block flex-1 px-4 py-2.5 rounded-lg border border-gray-300 bg-white font-bold flex-1 text-center"
                         >
                           Télécharger le rapport (PDF)
                         </button>
@@ -1042,7 +1141,7 @@ const handleSubmit = (e) => {
 
                       <button
                         onClick={() => setShowResult(false)}
-                        className="mt-4 w-full px-4 py-2.5 rounded-lg bg-gray-200 text-gray-900 font-bold"
+                        className="mt-4 w-full flex-1 px-4 py-2.5 rounded-lg bg-gray-200 text-gray-900 font-bold"
                       >
                         Modifier mes informations
                       </button>
