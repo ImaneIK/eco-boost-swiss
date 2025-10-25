@@ -7,7 +7,7 @@ import emailjs from '@emailjs/browser';
 
 // Import your images (adjust paths as needed)
 import heroImage from "@/assets/solarpumps.jpg";
-import solarPanels from "@/assets/heat-pump.jpg";
+import solarPanels from "@/assets/pompe.jpeg";
 import heatPump from "@/assets/heat-pump.jpg";
 import happyFamily from "@/assets/happy-family.jpg";
 import savings from "@/assets/savings3.jpeg";
@@ -59,7 +59,7 @@ export default function Index() {
       {
         "@type": "WebPage",
         "name": "Devis subventionnés - Automatisation des devis B2B",
-        "description": "Transformez vos devis en contrats signés. Plateforme automatisée pour créer, gérer et suivre vos devis B2B en Suisse Romande, UE et Afrique du Nord.",
+        "description": "Transformez vos devis en contrats signés. Plateforme automatisée pour créer, gérer et suivre vos devis B2B en Suisse, UE et Afrique du Nord.",
         "url": "https://devis-front.vercel.app/"
       }
     ]
@@ -106,6 +106,7 @@ export default function Index() {
     setLoading(true);
 
     const templateParams = {
+      mode : 'devis_form',
       submittedAt: new Date().toISOString(),
       projectType: form.projectType,
       codepostal: form.codepostal,
@@ -116,9 +117,27 @@ export default function Index() {
     };
 
     try {
+
+     const webhookURL = import.meta.env.VITE_N8N_API_URL;
+      if (webhookURL) {
+        fetch(webhookURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(templateParams)
+        })
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          console.log('n8n webhook sent successfully');
+        })
+        .catch(error => {
+          console.error("Erreur d’envoi vers n8n :", error);
+        });
+      }
+
+
       const response = await emailjs.send(
-        'service_m2f6pta',        // Service ID (verified format)
-        'template_8so6cuj',       // Template ID (double-check in dashboard!)
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,        // Service ID (verified format)
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID_FORMULAIRE,       // Template ID (double-check in dashboard!)
         templateParams
       );
       console.log('Email sent successfully!', response.status, response.text); // Enhanced logging
@@ -135,13 +154,9 @@ export default function Index() {
       });
       setErrors({});
       localStorage.removeItem("quoteForm"); // Clear saved data
+            
       
-      // Optional: Redirect after delay
-      setTimeout(() => {
-        navigate('/dashboard'); // Adjust path as needed
-      }, 2000);
-      
-      alert('Devis envoyés avec succès ! Vous recevrez une réponse sous 24h.');
+      // alert('Devis envoyés avec succès ! Vous recevrez une réponse sous 24h.');
       
     } catch (error) {
       console.error('Full EmailJS Error Details:', error); // Log full error object
@@ -156,14 +171,14 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/30">
       {/* Submitted message */}
-      {submitted && (
+      {/* {submitted && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-card p-8 rounded-2xl text-center">
             <h2 className="text-2xl font-bold mb-4">Devis soumis !</h2>
             <p className="text-muted-foreground mb-4">Redirection vers votre tableau de bord...</p>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Header - unchanged */}
       <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -177,7 +192,7 @@ export default function Index() {
               Comparatifdevis.ch
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Photovoltaïque & Pompes à chaleur — Suisse romande
+              Photovoltaïque & Pompes à chaleur — Suisse
             </p>
           </div>
         </div>
@@ -270,8 +285,8 @@ export default function Index() {
               transition={{ delay: 0.1, duration: 0.5 }}
             >
               Recevez jusqu'à <strong className="text-foreground">4 devis gratuits</strong> de
-              prestataires qualifiés en Suisse romande. Comparez, choisissez et économisez —
-              facilement et sans engagement.
+              prestataires qualifiés en Suisse. Comparez, choisissez et économisez —
+              gratuitement et sans engagement.
             </motion.p>
 
             <motion.div
@@ -364,6 +379,7 @@ export default function Index() {
                     <option value="">Sélectionnez un type...</option> {/* FIXED: Placeholder to avoid warning */}
                     <option value="panneaux solaires">Panneaux solaires</option>
                     <option value="pompe à chaleur">Pompe à chaleur</option>
+                    <option value="les deux">les deux</option>
                   </select>
                   {errors.projectType && <p className="text-destructive text-xs mt-1">{errors.projectType}</p>}
                 </div>
@@ -396,6 +412,7 @@ export default function Index() {
                   <label className="text-xs font-semibold text-foreground block mb-2">Nom</label>
                   <input
                     value={form.name || ''} // Ensure string
+                    placeholder="Ex: Jean Dupont"
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     disabled={loading}
@@ -407,6 +424,7 @@ export default function Index() {
                   <label className="text-xs font-semibold text-foreground block mb-2">Email</label>
                   <input
                     type="email"
+                    placeholder="Ex: jean.dupont@example.com"
                     value={form.email || ''} // Ensure string
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -419,6 +437,7 @@ export default function Index() {
                   <label className="text-xs font-semibold text-foreground block mb-2">Téléphone</label>
                   <input
                     type="tel"
+                    placeholder="Ex: 0123456789"
                     value={form.phone || ''} // Ensure string
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"

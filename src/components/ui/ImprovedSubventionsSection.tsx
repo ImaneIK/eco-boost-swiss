@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import emailjs from '@emailjs/browser';
 
 const ImprovedSubventionsSection = () => {
   const [showSimulator, setShowSimulator] = useState(false);
@@ -11,6 +12,7 @@ const ImprovedSubventionsSection = () => {
     postal: '',
     currentSystem: 'fuel',
     power: '',
+    pacType: 'air-eau',
     ownerStatus: 'owner',
     fullname: '',
     email: '',
@@ -21,23 +23,304 @@ const ImprovedSubventionsSection = () => {
     pvAid: 0,
     hpAid: 0,
     communal: 0,
-    total: 0
+    total: 0,
+    notes: ''
   });
 
-  // Données d'exemple par canton (taux indicatifs et plafonds en CHF)
-  const cantonData = {
-    VD: { pvRate: 0.5, pvUnit: 'kW', pvMax: 7500, hpRate: 600, hpUnit: 'installation', hpMax: 7500, communalBonus: 0 },
-    GE: { pvRate: 0.45, pvUnit: 'kW', pvMax: 7000, hpRate: 650, hpUnit: 'installation', hpMax: 7000, communalBonus: 500 },
-    BE: { pvRate: 0.4, pvUnit: 'kW', pvMax: 6000, hpRate: 500, hpUnit: 'installation', hpMax: 6000, communalBonus: 0 },
-    VS: { pvRate: 0.35, pvUnit: 'kW', pvMax: 5000, hpRate: 550, hpUnit: 'installation', hpMax: 5000, communalBonus: 300 },
-    FR: { pvRate: 0.45, pvUnit: 'kW', pvMax: 6000, hpRate: 500, hpUnit: 'installation', hpMax: 6000, communalBonus: 0 },
-    NE: { pvRate: 0.5, pvUnit: 'kW', pvMax: 7000, hpRate: 600, hpUnit: 'installation', hpMax: 7000, communalBonus: 200 },
-    JU: { pvRate: 0.3, pvUnit: 'kW', pvMax: 4000, hpRate: 400, hpUnit: 'installation', hpMax: 4000, communalBonus: 0 },
-    ZH: { pvRate: 0.4, pvUnit: 'kW', pvMax: 6500, hpRate: 500, hpUnit: 'installation', hpMax: 6500, communalBonus: 0 }
+  // Données réelles basées sur le tutoriel (Romandie only: remove BE, ZH)
+  const DATA = {
+    cantons: {
+      GE: {
+        pv_chf_per_kwc_min: 200,
+        pv_chf_per_kwc_max: 400,
+        pv_prime_max: 6000,
+        pac_air_eau_base: 3000,
+        pac_air_eau_per_kw: 400,
+        pac_sol_eau_base: 3000,
+        pac_sol_eau_per_kw: 800,
+        isolation_chf_per_m2: 60,
+        cecb_bonus_min: 500,
+        cecb_bonus_max: 1000,
+        fossil_replacement_bonus: 1500,
+        communal_bonus_percent: [25, 40],
+        conditions: "Demande avant travaux; CECB recommandé"
+      },
+      VD: {
+        pv_chf_per_kwc_min: 200,
+        pv_chf_per_kwc_max: 350,
+        pv_prime_max: 6000,
+        pac_air_eau_base: 5000,
+        pac_air_eau_per_kw: 400,
+        pac_sol_eau_base: 6000,
+        pac_sol_eau_per_kw: 600,
+        isolation_chf_per_m2: 60,
+        cecb_bonus: 750,
+        fossil_replacement_bonus: 1500,
+        communal_bonus_percent: [20, 30],
+        conditions: "Programme Bâtiments VD; CECB requis"
+      },
+      VS: {
+        pv_chf_per_kwc_min: 250,
+        pv_chf_per_kwc_max: 400,
+        pv_prime_max: 8000,
+        pac_air_eau_base: 9000,
+        pac_air_eau_per_kw: 0,
+        pac_sol_eau_base: 13000,
+        pac_sol_eau_per_kw: 0,
+        isolation_chf_per_m2: 50,
+        cecb_bonus: 500,
+        fossil_replacement_bonus: 2000,
+        communal_bonus_percent: [30, 40],
+        conditions: "Remplacement d’énergie fossile priorisé"
+      },
+      FR: {
+        pv_chf_per_kwc_min: 200,
+        pv_chf_per_kwc_max: 350,
+        pv_prime_max: 5000,
+        pac_air_eau_base: 7000,
+        pac_air_eau_per_kw: 0,
+        pac_sol_eau_base: 8000,
+        pac_sol_eau_per_kw: 0,
+        isolation_chf_per_m2: 60,
+        cecb_bonus: 700,
+        fossil_replacement_bonus: 1000,
+        communal_bonus_percent: [25, 25],
+        conditions: "CECB obligatoire pour rénovation"
+      },
+      NE: {
+        pv_chf_per_kwc_min: 180,
+        pv_chf_per_kwc_max: 300,
+        pv_prime_max: 4500,
+        pac_air_eau_base: 4000,
+        pac_air_eau_per_kw: 0,
+        pac_sol_eau_base: 5000,
+        pac_sol_eau_per_kw: 0,
+        isolation_chf_per_m2: 50,
+        cecb_bonus: 500,
+        fossil_replacement_bonus: 1000,
+        communal_bonus_percent: [20, 25],
+        conditions: "CECB Plus recommandé"
+      },
+      JU: {
+        pv_chf_per_kwc_min: 200,
+        pv_chf_per_kwc_max: 300,
+        pv_prime_max: 4000,
+        pac_air_eau_base: 5000,
+        pac_air_eau_per_kw: 0,
+        pac_sol_eau_base: 6500,
+        pac_sol_eau_per_kw: 0,
+        isolation_chf_per_m2: 45,
+        cecb_bonus: 500,
+        fossil_replacement_bonus: 1000,
+        communal_bonus_percent: [20, 25],
+        conditions: "Soumission avant travaux"
+      }
+    },
+    federal: {
+      pronovo_pru_per_kwc_estimate_min: 200,
+      pronovo_pru_per_kwc_estimate_max: 600,
+      programme_batiments_support_estimated: "variable selon dossier"
+    }
+  };
+
+  // Postal codes data per canton (major cities/communes)
+  const postalData = {
+    VD: [
+      { code: '1000', city: 'Lausanne' },
+      { code: '1012', city: 'Lausanne' },
+      { code: '1009', city: 'Pully' },
+      { code: '1066', city: 'Epalinges' },
+      { code: '1110', city: 'Morges' },
+      { code: '1196', city: 'Gland' },
+      { code: '1260', city: 'Nyon' },
+      { code: '1400', city: 'Yverdon-les-Bains' },
+      { code: '1800', city: 'Vevey' },
+      { code: '1820', city: 'Montreux' },
+      { code: '1860', city: 'Aigle' },
+      { code: '1008', city: 'Prilly' },
+      { code: '1020', city: 'Renens' },
+      { code: '1040', city: 'Echallens' },
+      { code: '1052', city: 'Le Mont-sur-Lausanne' }
+    ],
+    GE: [
+      { code: '1200', city: 'Genève' },
+      { code: '1201', city: 'Genève' },
+      { code: '1213', city: 'Petit-Lancy' },
+      { code: '1214', city: 'Vernier' },
+      { code: '1215', city: 'Meyrin' },
+      { code: '1216', city: 'Cointrin' },
+      { code: '1217', city: 'Meyrin' },
+      { code: '1218', city: 'Le Grand-Saconnex' },
+      { code: '1219', city: 'Châtelaine' },
+      { code: '1227', city: 'Carouge' },
+      { code: '1228', city: 'Plan-les-Ouates' },
+      { code: '1232', city: 'Confignon' },
+      { code: '1233', city: 'Bernex' },
+      { code: '1234', city: 'Versoix' },
+      { code: '1241', city: 'Puplinge' }
+    ],
+    VS: [
+      { code: '1870', city: 'Monthey' },
+      { code: '1902', city: 'Evionnaz' },
+      { code: '1920', city: 'Martigny' },
+      { code: '1950', city: 'Sion' },
+      { code: '1963', city: 'Vétroz' },
+      { code: '1974', city: 'Arbaz' },
+      { code: '3960', city: 'Sierre' },
+      { code: '3970', city: 'Salgesch' },
+      { code: '3900', city: 'Brig-Glis' },
+      { code: '3930', city: 'Visp' },
+      { code: '3930', city: 'Viège' },
+      { code: '3940', city: 'Saxon' },
+      { code: '3952', city: 'Savièse' },
+      { code: '3953', city: 'Evolène' },
+      { code: '3983', city: 'Eisten' }
+    ],
+    FR: [
+      { code: '1630', city: 'Bulle' },
+      { code: '1700', city: 'Fribourg' },
+      { code: '1470', city: 'Estavayer-le-Lac' },
+      { code: '1564', city: 'Domdidier' },
+      { code: '1618', city: 'Châtel-Saint-Denis' },
+      { code: '1712', city: 'Tafers' },
+      { code: '1723', city: 'Marly' },
+      { code: '1752', city: 'Villars-sur-Glâne' },
+      { code: '1762', city: 'Givisiez' },
+      { code: '1784', city: 'Courtepin' },
+      { code: '1786', city: 'Sugiez' },
+      { code: '3175', city: 'Flamatt' },
+      { code: '3184', city: 'Wünnewil-Flamatt' },
+      { code: '3210', city: 'Kerzers' },
+      { code: '3280', city: 'Murten' }
+    ],
+    NE: [
+      { code: '2000', city: 'Neuchâtel' },
+      { code: '2001', city: 'Neuchâtel' },
+      { code: '2002', city: 'Neuchâtel' },
+      { code: '2010', city: 'Neuchâtel OFS' },
+      { code: '2067', city: 'Chaumont' },
+      { code: '2100', city: 'Travers' },
+      { code: '2300', city: 'La Chaux-de-Fonds' },
+      { code: '2400', city: 'Le Locle' },
+      { code: '2500', city: 'Biel/Bienne' },
+      { code: '2540', city: 'Grenchen' },
+      { code: '2520', city: 'Nidau' },
+      { code: '2560', city: 'Niederwil' },
+      { code: '2610', city: 'Rheinfelden' },
+      { code: '2710', city: 'Tavannes' },
+      { code: '2740', city: 'Montfaucon' }
+    ],
+    JU: [
+      { code: '2800', city: 'Delémont' },
+      { code: '2900', city: 'Porrentruy' },
+      { code: '2350', city: 'Saignelégier' },
+      { code: '2830', city: 'Courrendlin' },
+      { code: '2854', city: 'Bassecourt' },
+      { code: '2336', city: 'Les Bois' },
+      { code: '2340', city: 'Le Noirmont' },
+      { code: '2345', city: 'Les Breuleux' },
+      { code: '2802', city: 'Develier' },
+      { code: '2822', city: 'Courroux' },
+      { code: '2824', city: 'Vicques' },
+      { code: '2852', city: 'Courtételle' },
+      { code: '2853', city: 'Courfaivre' },
+      { code: '2855', city: 'Glovelier' },
+      { code: '2856', city: 'Boécourt' }
+    ]
+  };
+
+  // Utilitaires
+  const avgRange = (range) => {
+    if (!Array.isArray(range)) return range;
+    return (range[0] + range[1]) / 2;
+  };
+
+  const chooseWithin = (min, max) => {
+    if (typeof min === 'number' && typeof max === 'number') return Math.round((min + max) / 2);
+    return min || max;
+  };
+
+  // Calcul PV
+  const calculatePV = (cantonCode, kwc) => {
+    const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
+    const pv_rate_min = c.pv_chf_per_kwc_min;
+    const pv_rate_max = c.pv_chf_per_kwc_max;
+    const pv_rate = chooseWithin(pv_rate_min, pv_rate_max);
+    const estimated_cost_offset = Math.round(pv_rate * kwc);
+    const prime = Math.min(c.pv_prime_max || 0, estimated_cost_offset);
+    const federal_min = DATA.federal.pronovo_pru_per_kwc_estimate_min * kwc;
+    const federal_max = DATA.federal.pronovo_pru_per_kwc_estimate_max * kwc;
+    const federal_estimate = Math.round((federal_min + federal_max) / 2);
+
+    return {
+      kwc,
+      pv_rate_chf_per_kwc: pv_rate,
+      estimated_offset_chf: estimated_cost_offset,
+      prime_cantonale_chf: prime,
+      federal_pronovo_estimate_chf: federal_estimate,
+      total_pv_subvention_estimated: prime + federal_estimate
+    };
+  };
+
+  // Calcul PAC
+  const calculatePAC = (cantonCode, type, kw, isFossil = false) => {
+    const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
+    const result: any = { type };
+
+    let base, per_kw;
+    if (type === 'air-eau') {
+      base = c.pac_air_eau_base || 0;
+      per_kw = c.pac_air_eau_per_kw || 0;
+    } else if (type === 'sol-eau') {
+      base = c.pac_sol_eau_base || 0;
+      per_kw = c.pac_sol_eau_per_kw || 0;
+    } else {
+      throw new Error('Type PAC inconnu (air-eau | sol-eau)');
+    }
+
+    const perKWPart = kw ? Math.round(per_kw * kw) : 0;
+    const estimated_subvention = base + perKWPart;
+    result.base = base;
+    result.per_kw = per_kw;
+    result.kw = kw;
+    result.estimated_subvention = estimated_subvention;
+
+    const fossilBonus = isFossil ? (c.fossil_replacement_bonus || 0) : 0;
+    result.fossil_replacement_bonus = fossilBonus;
+    result.total_estimated = estimated_subvention + fossilBonus;
+    return result;
+  };
+
+  // Application bonus communal (moyenne)
+  const applyCommunalBonus = (cantonCode, amount) => {
+    const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
+    const cp = c.communal_bonus_percent;
+    let percent = 0;
+    if (Array.isArray(cp)) {
+      percent = Math.round((cp[0] + cp[1]) / 2);
+    } else if (typeof cp === 'number') {
+      percent = cp;
+    }
+    const communal_bonus = Math.round(amount * (percent / 100));
+    return {
+      communal_bonus,
+      communal_percent_used: percent,
+      total_with_commune: amount + communal_bonus
+    };
   };
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePostalChange = (e) => {
+    const code = e.target.value;
+    const opt = postalData[formData.canton]?.find(o => o.code === code);
+    setFormData(prev => ({ 
+      ...prev, 
+      postal: code,
+      postalCity: opt ? opt.city : '' 
+    }));
   };
 
   const handleNext = (step) => {
@@ -48,59 +331,174 @@ const ImprovedSubventionsSection = () => {
     setCurrentStep(step);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const data = formData;
-    let power = parseFloat(data.power) || (data.projectType === 'pv' ? 10 : 12);
-    const effectiveCanton = data.canton === 'ZH-CUSTOM' ? 'ZH' : data.canton;
-    const info = cantonData[effectiveCanton] || cantonData['VD'];
-    const project = data.projectType || 'pv';
+const handleSubmit = (e) => {
+  e.preventDefault();
+  
+  // Step 1: Validate and sanitize formData to control empty/undefined values
+  const data : Record<string, any> = { ...formData }; // Clone to avoid mutating original
+  
+  // Sanitize: Ensure all keys exist, trim strings, set safe defaults
+  const sanitizedData = {
+    projectType: (data.projectType || '').trim() || 'pv', // Default to 'pv' if empty
+    canton: (data.canton || '').trim() || 'VD', // Default canton
+    postal: (data.postal || '').trim(),
+    postalCity: (data.postalCity || '').trim(),
+    buildingType: (data.buildingType || '').trim() || 'house', // Default building type
+    currentSystem: (data.currentSystem || '').trim() || 'none', // Default system
+    power: parseFloat((data.power || '0').trim()) || (data.projectType === 'pv' ? 10 : 12), // Already has fallback, but ensure non-negative
+    pacType: (data.pacType || '').trim() || 'air-eau', // Default PAC type if empty
+    ownerStatus: (data.ownerStatus || '').trim() || 'owner', // Default status
+    fullname: (data.fullname || '').trim(),
+    email: (data.email || '').trim().toLowerCase(), // Normalize email
+    phone: (data.phone || '').trim().replace(/\D/g, ''), // Strip non-digits for phone
+  };
 
-    let pvAid = 0;
-    if (project === 'pv' || project === 'both') {
-      pvAid = Math.round(Math.min(info.pvMax, info.pvRate * power * 1000));
-    }
+  // Early validation: Check required fields (prevent submit with empties)
+  const requiredFields = ['fullname', 'email', 'phone', 'canton'];
+  const missingFields = requiredFields.filter(field => !sanitizedData[field]);
+  if (missingFields.length > 0) {
+    console.warn('Missing required fields:', missingFields); // Or set errors state
+    alert(`Veuillez remplir: ${missingFields.join(', ')}`);
+    return;
+  }
 
-    let hpAid = 0;
-    if (project === 'hp' || project === 'both') {
-      const base = info.hpRate;
-      let multiplier = 1;
-      if (data.currentSystem === 'fuel' || data.currentSystem === 'gas') multiplier = 1.2;
-      hpAid = Math.round(Math.min(info.hpMax, base * multiplier));
-    }
+  // Validate email/phone basics (expand as needed)
+  if (!/\S+@\S+\.\S+/.test(sanitizedData.email)) {
+    alert('Email invalide');
+    return;
+  }
+  if (sanitizedData.phone.length < 10) {
+    alert('Numéro de téléphone trop court');
+    return;
+  }
 
-    const communal = info.communalBonus || 0;
-    const total = pvAid + hpAid + communal;
+  // Step 2: Calculations with sanitized data (safer now)
+  const effectiveCanton = sanitizedData.canton;
+  const c = DATA.cantons[effectiveCanton] || DATA.cantons.VD;
+  const project = sanitizedData.projectType;
+  const isFossil = sanitizedData.currentSystem === 'fuel' || sanitizedData.currentSystem === 'gas';
 
-    setSimulatorResult({ pvAid, hpAid, communal, total });
-    setShowResult(true);
+  let pv = null;
+  let hp = null;
+  let subtotal = 0;
 
-    // Envoi automatique vers n8n (si configuré)
-    const webhookURL = "https://n8n.yourdomain.ch/webhook/simulateur"; // à remplacer par ton URL webhook n8n
+  if (project === 'pv' || project === 'both') {
+    pv = calculatePV(effectiveCanton, sanitizedData.power);
+    subtotal += pv.total_pv_subvention_estimated || 0; // Fallback to 0 if calc returns null
+  }
 
-    const payload = {
-      submittedAt: new Date().toISOString(),
-      project: project,
-      canton: effectiveCanton,
-      postal: data.postal || '',
-      buildingType: data.buildingType || '',
-      currentSystem: data.currentSystem || '',
-      power: power,
-      ownerStatus: data.ownerStatus || '',
-      fullname: data.fullname || '',
-      email: data.email || '',
-      phone: data.phone || '',
-      pvAid, hpAid, communal, total
-    };
+  if (project === 'hp' || project === 'both') {
+    hp = calculatePAC(effectiveCanton, sanitizedData.pacType, sanitizedData.power, isFossil);
+    subtotal += hp.total_estimated || 0;
+  }
 
+  const communal = applyCommunalBonus(effectiveCanton, subtotal);
+  const total = communal.total_with_commune || 0;
+  const notes = c.conditions || 'Aucune note disponible';
+
+  const pvAid = pv ? pv.total_pv_subvention_estimated : 0;
+  const hpAid = hp ? hp.total_estimated : 0;
+
+  setSimulatorResult({ 
+    pvAid, 
+    hpAid, 
+    communal: communal.communal_bonus || 0, 
+    total, 
+    notes 
+  });
+  setShowResult(true);
+
+  // Step 3: Prepare payload with no empties (all values are now defined)
+  const payload = {
+    mode: 'simulator',
+    submittedAt: new Date().toISOString(),
+    project: project,
+    canton: effectiveCanton,
+    postal: sanitizedData.postal || 'Non spécifié',
+    postalCity: sanitizedData.postalCity || 'Non spécifié',
+    buildingType: sanitizedData.buildingType,
+    currentSystem: sanitizedData.currentSystem,
+    power: sanitizedData.power,
+    pacType: sanitizedData.pacType,
+    ownerStatus: sanitizedData.ownerStatus,
+    fullname: sanitizedData.fullname,
+    email: sanitizedData.email,
+    phone: sanitizedData.phone,
+    pvAid,
+    hpAid,
+    communal: communal.communal_bonus || 0,
+    total,
+    notes
+  };
+
+  // Step 4: Send to n8n webhook (with error handling)
+  const webhookURL = import.meta.env.VITE_N8N_API_URL;
+  if (webhookURL) {
     fetch(webhookURL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
-    }).catch(error => {
+    })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      console.log('n8n webhook sent successfully');
+    })
+    .catch(error => {
       console.error("Erreur d’envoi vers n8n :", error);
     });
-  };
+  }
+
+  // Step 5: Send email via EmailJS (with fallbacks for empty results)
+  const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+  const emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_SIMULATOR;
+  const emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+  if (emailjsServiceId && emailjsTemplateId && emailjsPublicKey) {
+    const formattedDate = new Date().toLocaleString('fr-CH', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }).replace(/\//g, '.');
+
+    const formattedPvAid = pvAid.toLocaleString('fr-CH');
+    const formattedHpAid = hpAid.toLocaleString('fr-CH');
+    const formattedCommunal = (communal.communal_bonus || 0).toLocaleString('fr-CH');
+    const formattedTotal = total.toLocaleString('fr-CH');
+
+    const emailParams = {
+      fullname: sanitizedData.fullname || 'Anonyme',
+      email: sanitizedData.email,
+      phone: sanitizedData.phone || 'Non fourni',
+      project: project,
+      canton: effectiveCanton,
+      postal: sanitizedData.postal || 'Non spécifié',
+      postalCity: sanitizedData.postalCity || 'Non spécifiée',
+      buildingType: sanitizedData.buildingType,
+      currentSystem: sanitizedData.currentSystem,
+      power: sanitizedData.power,
+      pacType: sanitizedData.pacType,
+      ownerStatus: sanitizedData.ownerStatus,
+      submittedAt: formattedDate,
+      pvAid: formattedPvAid,
+      hpAid: formattedHpAid,
+      communal: formattedCommunal,
+      total: formattedTotal,
+      notes: notes || 'Aucune note'
+    };
+
+    emailjs.send(emailjsServiceId, emailjsTemplateId, emailParams, emailjsPublicKey)
+      .then((response) => {
+        console.log('Email sent successfully:', response.status, response.text);
+      })
+      .catch((error) => {
+        console.error('Email send error:', error);
+      });
+  } else {
+    console.warn('EmailJS env vars missing—email not sent');
+  }
+};
 
   const handleDownloadPDF = () => {
     const printContent = `
@@ -122,7 +520,7 @@ const ImprovedSubventionsSection = () => {
           <h1>Rapport d'estimation - Subventions énergétiques</h1>
           <div class="result">
             <strong>Estimation rapide</strong>
-            <p>D'après vos informations (canton <strong>${formData.canton}</strong>), l'estimation indicative est :</p>
+            <p>D'après vos informations (canton <strong>${formData.canton}</strong>, code postal <strong>${formData.postal || 'Non spécifié'}</strong>), l'estimation indicative est :</p>
             <ul>
               ${simulatorResult.pvAid > 0 ? `<li>🔆 Panneaux solaires : <strong>CHF ${simulatorResult.pvAid.toLocaleString()}</strong></li>` : ''}
               ${simulatorResult.hpAid > 0 ? `<li>🔥 Pompe à chaleur : <strong>CHF ${simulatorResult.hpAid.toLocaleString()}</strong></li>` : ''}
@@ -130,11 +528,12 @@ const ImprovedSubventionsSection = () => {
             </ul>
             <p class="total"><strong>Total estimé : CHF ${simulatorResult.total.toLocaleString()}</strong></p>
             <p>Ce résultat est indicatif. Un conseiller vérifiera les primes exactes (communes, conditions techniques, certificats).</p>
+            <p><strong>Conditions :</strong> ${simulatorResult.notes}</p>
           </div>
           <footer>
             <p>comparatifdevis.ch - Rapport généré le ${new Date().toLocaleDateString('fr-CH')}</p>
             <p>Projet: ${formData.projectType}, Puissance: ${formData.power || 'Estimation'}, Système actuel: ${formData.currentSystem}</p>
-            <p>Contact: ${formData.fullname} - ${formData.email}</p>
+            <p>Contact: ${formData.fullname} - ${formData.email} - Code postal: ${formData.postal || 'Non spécifié'}</p>
           </footer>
         </body>
       </html>
@@ -198,7 +597,7 @@ const ImprovedSubventionsSection = () => {
               <div className="text-3xl mb-3">🏛️</div>
               <h5 className="font-bold text-green-800 mb-2">Subventions communales</h5>
               <p className="text-xs text-green-600">
-                Obtenez jusqu’à 40 % d’aides pour vos panneaux solaires et pompes à chaleur partout en Suisse romande !
+                Obtenez jusqu’à 40 % d’aides pour vos panneaux solaires et pompes à chaleur partout en Suisse !
               </p>
             </div>
           </div>
@@ -283,7 +682,7 @@ const ImprovedSubventionsSection = () => {
                         color: '#065f46', 
                         padding: '10px 14px', 
                         borderRadius: '10px', 
-                        fontWeight: 600, 
+                        fontWeight: '600', 
                         textDecoration: 'none' 
                       }}
                     >
@@ -310,8 +709,8 @@ const ImprovedSubventionsSection = () => {
                     <>
                       <h1 className="text-2xl font-bold mb-1">Simulateur d'aides - Panneaux solaires & Pompes à chaleur</h1>
                       <p className="text-green-600 mb-4">Estimez en 2 minutes les subventions fédérales, cantonales et communales potentielles. Les résultats sont indicatifs — un conseiller vérifiera l'éligibilité exacte.</p>
-                      
-                      <div className="flex gap-2 my-4">
+
+                      <div className="flex flex-wrap gap-2 my-4">
                         {[1, 2, 3, 4].map((s) => (
                           <div
                             key={s}
@@ -330,7 +729,7 @@ const ImprovedSubventionsSection = () => {
                         {currentStep === 1 && (
                           <div>
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Quel type de projet ?</label>
-                            <div className="flex gap-3 mt-1.5">
+                            <div className="flex flex-wrap gap-3 mt-1.5">
                               <div className="flex-1">
                                 <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer">
                                   <input
@@ -409,24 +808,25 @@ const ImprovedSubventionsSection = () => {
                             >
                               <option value="VD">Vaud</option>
                               <option value="GE">Genève</option>
-                              <option value="BE">Berne</option>
                               <option value="VS">Valais</option>
                               <option value="FR">Fribourg</option>
                               <option value="NE">Neuchâtel</option>
                               <option value="JU">Jura</option>
-                              <option value="ZH">Zurich</option>
-                              <option value="ZH-CUSTOM">Autre (choisir dans la liste)</option>
                             </select>
 
-                            <label className="block mt-3 font-semibold text-green-800 text-sm">Code postal / Commune (optionnel pour affiner)</label>
-                            <input
-                              type="text"
-                              name="postal"
-                              placeholder="Ex: 1000 Lausanne"
+                            <label className="block mt-3 font-semibold text-green-800 text-sm">Code postal / Commune</label>
+                            <select
                               value={formData.postal}
-                              onChange={(e) => handleChange('postal', e.target.value)}
+                              onChange={handlePostalChange}
                               className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
-                            />
+                            >
+                              <option value="">Choisir une commune (optionnel)</option>
+                              {postalData[formData.canton]?.map((opt) => (
+                                <option key={opt.code} value={opt.code}>
+                                  {opt.code} - {opt.city}
+                                </option>
+                              ))}
+                            </select>
 
                             <div className="mt-3 flex justify-between">
                               <button
@@ -463,11 +863,26 @@ const ImprovedSubventionsSection = () => {
                               <option value="none">Aucun / nouvelle construction</option>
                             </select>
 
-                            <label className="block mt-3 font-semibold text-green-800 text-sm">Surface de toiture / puissance souhaitée</label>
+                            {(formData.projectType === 'hp' || formData.projectType === 'both') && (
+                              <>
+                                <label className="block mt-3 font-semibold text-green-800 text-sm">Type de pompe à chaleur</label>
+                                <select
+                                  name="pacType"
+                                  value={formData.pacType}
+                                  onChange={(e) => handleChange('pacType', e.target.value)}
+                                  className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
+                                >
+                                  <option value="air-eau">Air-eau</option>
+                                  <option value="sol-eau">Sol-eau</option>
+                                </select>
+                              </>
+                            )}
+
+                            <label className="block mt-3 font-semibold text-green-800 text-sm">Surface de toiture</label>
                             <input
                               type="number"
                               name="power"
-                              placeholder="kWc pour PV ou kW thermique pour PAC"
+                              placeholder="en m² (ex: 10)"
                               min="0"
                               step="0.1"
                               value={formData.power}
@@ -516,6 +931,7 @@ const ImprovedSubventionsSection = () => {
                             <input
                               type="text"
                               name="fullname"
+                              placeholder="Ex: Jean Dupont"
                               required
                               value={formData.fullname}
                               onChange={(e) => handleChange('fullname', e.target.value)}
@@ -526,6 +942,7 @@ const ImprovedSubventionsSection = () => {
                             <input
                               type="email"
                               name="email"
+                              placeholder="Ex: jean.dupont@example.com"
                               required
                               value={formData.email}
                               onChange={(e) => handleChange('email', e.target.value)}
@@ -536,6 +953,8 @@ const ImprovedSubventionsSection = () => {
                             <input
                               type="tel"
                               name="phone"
+                              placeholder="Ex: +41 79 123 45 67"
+                              required
                               value={formData.phone}
                               onChange={(e) => handleChange('phone', e.target.value)}
                               className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
@@ -583,7 +1002,7 @@ const ImprovedSubventionsSection = () => {
                       <div className="mt-4 p-3.5 rounded-xl bg-gradient-to-b from-green-50 to-emerald-50">
                         <strong>Estimation rapide</strong>
                         <p className="my-1.5">
-                          D'après vos informations (canton <strong>{formData.canton}</strong>), l'estimation indicative est :
+                          D'après vos informations (canton <strong>{formData.canton}</strong>, code postal <strong>{formData.postal || 'Non spécifié'}</strong>), l'estimation indicative est :
                         </p>
                         <ul className="space-y-1">
                           {simulatorResult.pvAid > 0 && (
@@ -602,6 +1021,11 @@ const ImprovedSubventionsSection = () => {
                         <p className="my-1.5 text-sm">
                           Ce résultat est indicatif. Un conseiller vérifiera les primes exactes (communes, conditions techniques, certificats).
                         </p>
+                        {simulatorResult.notes && (
+                          <p className="text-sm text-gray-600 mt-2 border-t pt-2">
+                            <strong>Conditions :</strong> {simulatorResult.notes}
+                          </p>
+                        )}
                       </div>
 
                       <div className="mt-3 flex gap-2">
