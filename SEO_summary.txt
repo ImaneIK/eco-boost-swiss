@@ -14,7 +14,7 @@ Prompt (Arabic + English summary)
    - CLERK_SECRET_KEY=<...>
 
 2. تحسين head (index.html):
-   - ضبط <title>, <meta name="description"> و<meta name="keywords"> وOpen Graph tags مناسبة للمنطقة (Suisse Romande, UE, Afrique du Nord).
+   - ضبط <title>, <meta name="description"> و<meta name="keywords"> وOpen Graph tags مناسبة للمنطقة (Suisse, UE, Afrique du Nord).
 
 3. في صفحة الهبوط `src/pages/Index.tsx`:
    - إضافة aria-label لكل section رئيسي (hero, form, how, subventions, testimonials).
@@ -39,7 +39,7 @@ Prompt (Arabic + English summary)
 - ملف البيئة:
   - أنشأت/حدّثت `.env` بقيم: `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_BACKEND_URL`, متغيرات Supabase و`CLERK_SECRET_KEY` حتى يعمل التطبيق محلياً.
 - تحسين head:
-  - عدّلت `index.html` وأضافت عنوان محسّن، `meta description` و`meta keywords` وOpen Graph tags مخصّصة للمناطق المستهدفة (Suisse Romande, UE, Afrique du Nord).
+  - عدّلت `index.html` وأضافت عنوان محسّن، `meta description` و`meta keywords` وOpen Graph tags مخصّصة للمناطق المستهدفة (Suisse, UE, Afrique du Nord).
 - صور وSEO للصور:
   - جمعت صور المشروع (`public` + `src/assets`) وأنشأت `image-seo.csv` يحتوي على أسماء الملفات، نصوص alt مقترحة، og image URL وcaption اقتراحي.
 - صفحة Index (`src/pages/Index.tsx`):
