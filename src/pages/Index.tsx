@@ -437,7 +437,7 @@ export default function Index() {
                   <label className="text-xs font-semibold text-foreground block mb-2">Téléphone</label>
                   <input
                     type="tel"
-                    placeholder="Ex: 0123456789"
+                    placeholder="Ex: +41 79 123 45 67"
                     value={form.phone || ''} // Ensure string
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -679,11 +679,11 @@ export default function Index() {
               <a className="text-muted-foreground hover:text-foreground transition-colors" href="#">
                 Avenue de Tivoli 19bis – 1007 Lausanne
               </a>
-              <a className="text-muted-foreground hover:text-foreground transition-colors" href="#">
+              <a className="text-muted-foreground hover:text-foreground transition-colors" href="/privacy-policy">
                 Politique de confidentialité
               </a>
-              <a className="text-muted-foreground hover:text-foreground transition-colors" href="#">
-                Contact
+              <a className="text-muted-foreground hover:text-foreground transition-colors" href="en-savoir-plus">
+                En Savoir plus
               </a>
             </div>
           </div>
