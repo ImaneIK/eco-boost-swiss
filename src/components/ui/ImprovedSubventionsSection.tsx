@@ -2,26 +2,59 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import emailjs from '@emailjs/browser';
 
+
+interface FormData {
+  projectType: string;
+  buildingType: string;
+  canton: string;
+  postal: string;
+  postalCity?: string; // Optional, as it’s set conditionally
+  currentSystem: string;
+  power: string;
+  pacType: string;
+  ownerStatus: string;
+  installationType: string;
+  serviceYear: string;
+  hasCECB: boolean;
+  autoconsommation: string;
+  fullname: string;
+  email: string;
+  phone: string;
+}
+
+
+interface PACResult {
+  type: string;
+  base: number;
+  per_kw: number;
+  kw: number;
+  estimated_subvention: number;
+  fossil_replacement_bonus: number;
+  total_estimated: number;
+}
+
 const ImprovedSubventionsSection = () => {
   const [showSimulator, setShowSimulator] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    projectType: 'pv',
-    buildingType: 'house',
-    canton: 'VD',
-    postal: '',
-    currentSystem: 'fuel',
-    power: '',
-    pacType: 'air-eau',
-    ownerStatus: 'owner',
-    installationType: '',
-    serviceYear: '2025',
-    hasCECB: false,
-    autoconsommation: '',
-    fullname: '',
-    email: '',
-    phone: ''
-  });
+const [formData, setFormData] = useState<FormData>({
+  projectType: 'pv',
+  buildingType: 'house',
+  canton: 'VD',
+  postal: '',
+  postalCity: '', // Add this to match the interface
+  currentSystem: 'fuel',
+  power: '',
+  pacType: 'air-eau',
+  ownerStatus: 'owner',
+  installationType: '',
+  serviceYear: '2025',
+  hasCECB: false,
+  autoconsommation: '',
+  fullname: '',
+  email: '',
+  phone: ''
+});
+
   const [showResult, setShowResult] = useState(false);
   const [simulatorResult, setSimulatorResult] = useState({
     pvAid: 0,
@@ -285,33 +318,33 @@ const ImprovedSubventionsSection = () => {
   };
 
   // Calcul PAC (unchanged)
-  const calculatePAC = (cantonCode, type, kw, isFossil = false) => {
-    const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
-    const result : any = { type };
+const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: boolean): PACResult => {
+  const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
+  const result: PACResult = { type, base: 0, per_kw: 0, kw: 0, estimated_subvention: 0, fossil_replacement_bonus: 0, total_estimated: 0 };
 
-    let base, per_kw;
-    if (type === 'air-eau') {
-      base = c.pac_air_eau_base || 0;
-      per_kw = c.pac_air_eau_per_kw || 0;
-    } else if (type === 'sol-eau') {
-      base = c.pac_sol_eau_base || 0;
-      per_kw = c.pac_sol_eau_per_kw || 0;
-    } else {
-      throw new Error('Type PAC inconnu (air-eau | sol-eau)');
-    }
+  let base: number, per_kw: number;
+  if (type === 'air-eau') {
+    base = c.pac_air_eau_base || 0;
+    per_kw = c.pac_air_eau_per_kw || 0;
+  } else if (type === 'sol-eau') {
+    base = c.pac_sol_eau_base || 0;
+    per_kw = c.pac_sol_eau_per_kw || 0;
+  } else {
+    throw new Error('Type PAC inconnu (air-eau | sol-eau)');
+  }
 
-    const perKWPart = kw ? Math.round(per_kw * kw) : 0;
-    const estimated_subvention = base + perKWPart;
-    result.base = base;
-    result.per_kw = per_kw;
-    result.kw = kw;
-    result.estimated_subvention = estimated_subvention;
+  const perKWPart = kw ? Math.round(per_kw * kw) : 0;
+  const estimated_subvention = base + perKWPart;
+  result.base = base;
+  result.per_kw = per_kw;
+  result.kw = kw;
+  result.estimated_subvention = estimated_subvention;
+  const fossilBonus = isFossil ? (c.fossil_replacement_bonus || 0) : 0;
+  result.fossil_replacement_bonus = fossilBonus;
+  result.total_estimated = estimated_subvention + fossilBonus;
 
-    const fossilBonus = isFossil ? (c.fossil_replacement_bonus || 0) : 0;
-    result.fossil_replacement_bonus = fossilBonus;
-    result.total_estimated = estimated_subvention + fossilBonus;
-    return result;
-  };
+  return result;
+};
 
   // Application bonus communal (moyenne)
   const applyCommunalBonus = (cantonCode, amount) => {
@@ -357,7 +390,7 @@ const ImprovedSubventionsSection = () => {
     e.preventDefault();
     
     // Step 1: Validate and sanitize formData to control empty/undefined values
-    const data : any = { ...formData }; // Clone to avoid mutating original
+    const data : FormData = { ...formData }; // Clone to avoid mutating original
     
     // Sanitize: Ensure all keys exist, trim strings, set safe defaults
     const sanitizedData = {
@@ -718,7 +751,7 @@ const ImprovedSubventionsSection = () => {
                     </button>
 
                     <a 
-                      href="mailto:contact@comparatifdevis.ch" 
+                      href="mailto:contact@comparatifdevis.com " 
                       style={{ 
                         background: 'transparent', 
                         border: '1px solid #d1fae5', 

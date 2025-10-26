@@ -152,8 +152,8 @@ const PrivacyPolicyPage: React.FC = () => {
             </ul>
             <p className="text-gray-600 mt-4">
               Pour exercer vos droits, contactez-nous à :{' '}
-              <a href="mailto:contact@comparatifdevis.ch" className="text-green-600 hover:underline font-semibold">
-                contact@comparatifdevis.ch
+              <a href="mailto:contact@comparatifdevis.com " className="text-green-600 hover:underline font-semibold">
+                contact@comparatifdevis.com 
               </a>
             </p>
           </div>
@@ -187,24 +187,15 @@ const PrivacyPolicyPage: React.FC = () => {
               <p className="text-gray-700">Avenue de Tivoli 19bis – 1007 Lausanne</p>
               <p className="mt-2">
                 📧{' '}
-                <a href="mailto:contact@comparatifdevis.ch" className="text-green-600 hover:underline font-semibold">
-                  contact@comparatifdevis.ch
+                <a href="contact@comparatifdevis.com " className="text-green-600 hover:underline font-semibold">
+                  contact@comparatifdevis.com 
                 </a>
               </p>
             </div>
           </div>
         </section>
 
-        {/* Additional Offer */}
-        <section className="mt-12 p-6 bg-green-100 rounded-lg border border-green-300">
-          <p className="text-gray-700 mb-2">
-            Si tu veux, je peux te rédiger <strong>une version plus courte et friendly</strong>, 
-            adaptée pour le site directement sous le formulaire, pour que ce soit lisible et rassurant pour l’utilisateur.
-          </p>
-          <p className="text-gray-700 italic">
-            Veux-tu que je fasse ça ?
-          </p>
-        </section>
+        
       </main>
 
       {/* Footer */}
