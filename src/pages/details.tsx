@@ -248,7 +248,7 @@ const SubventionsSolaires = () => {
             Les nouvelles subventions rendent le passage à l'énergie renouvelable plus attractif que jamais. 
             Nos experts vous accompagnent à chaque étape.
           </p>
-           <a href="mailto:contact@comparatifdevis.ch" className="text-green-600 hover:underline font-semibold">
+           <a href="mailto:contact@comparatifdevis.com" className="text-green-600 hover:underline font-semibold">
                <button className="bg-white text-green-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-green-50 transition-colors shadow-lg">
             Contactez Comparatifdevis →
           </button>

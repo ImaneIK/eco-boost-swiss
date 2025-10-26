@@ -718,7 +718,7 @@ const ImprovedSubventionsSection = () => {
                     </button>
 
                     <a 
-                      href="mailto:contact@comparatifdevis.ch" 
+                      href="mailto:contact@comparatifdevis.com " 
                       style={{ 
                         background: 'transparent', 
                         border: '1px solid #d1fae5', 
