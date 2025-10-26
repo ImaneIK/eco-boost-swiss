@@ -24,7 +24,7 @@ const sheetsService = new SheetsService(sheets, process.env.SPREADSHEET_ID || ''
 
 // CORS middleware
 const corsMiddleware = cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+  origin: '*',
 });
 
 // Vercel serverless handler
