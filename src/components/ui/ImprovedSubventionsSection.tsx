@@ -469,7 +469,7 @@ const ImprovedSubventionsSection = () => {
     };
 
     // Step 4: Send to n8n webhook (with error handling)
-    const webhookURL = import.meta.env.VITE_N8N_API_URL;
+    const webhookURL = "http://localhost:5678/submit";
     if (webhookURL) {
       fetch(webhookURL, {
         method: "POST",
