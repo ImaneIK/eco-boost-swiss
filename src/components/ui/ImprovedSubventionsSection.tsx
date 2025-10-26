@@ -502,7 +502,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
     };
 
     // Step 4: Send to n8n webhook (with error handling)
-    const webhookURL = "https://eco-boost-swiss.vercel.app/api/submit";
+    const webhookURL = import.meta.env.VITE_API_URL;
     if (webhookURL) {
       fetch(webhookURL, {
         method: "POST",

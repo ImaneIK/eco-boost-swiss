@@ -1,84 +1,135 @@
-// backend/service.ts
-import { google } from 'googleapis';
-import credentials from '../comparatifdevis-85da4843662d.json'; // adjust path if needed
+import { google, sheets_v4 } from 'googleapis';
 
-type Mode = 'simulator' | 'devis_form';
+export type Mode = 'simulator' | 'devis_form';
 
-const sheetsMap: Record<Mode, string> = {
-  simulator: '183qvGhvNchAsMXAkmVRveOBuL32FcfQ51A1Ts321Lkw', // replace with your actual Sheet ID
-  devis_form: '183qvGhvNchAsMXAkmVRveOBuL32FcfQ51A1Ts321Lkw',    // replace with your actual Sheet ID
-};
-
-interface Payload {
-  mode: Mode;
-  [key: string]: any; // any additional fields from forms
+export interface SimulatorPayload {
+  mode: 'simulator';
+  submittedAt: string;
+  fullname: string;
+  email: string;
+  phone: string;
+  project: string;
+  canton: string;
+  postal?: string;
+  postalCity?: string;
+  buildingType?: string;
+  currentSystem?: string;
+  power?: number;
+  pacType?: string;
+  ownerStatus?: string;
+  installationType?: string;
+  serviceYear?: string;
+  hasCECB?: boolean;
+  autoconsommation?: number;
+  pvAid?: number;
+  hpAid?: number;
+  communal?: number;
+  total?: number;
+  notes?: string;
 }
 
+export interface DevisFormPayload {
+  mode: 'devis_form';
+  submittedAt: string;
+  name: string;
+  email: string;
+  phone: string;
+  projectType: string;
+  codepostal: string;
+  details: string;
+}
+
+export type Payload = SimulatorPayload | DevisFormPayload;
+
 export class SheetsService {
-  private sheets;
+  private sheets: sheets_v4.Sheets;
+  private spreadsheetId: string;
+  private logger: import('winston').Logger;
 
-  constructor() {
-    const auth = new google.auth.GoogleAuth({
-      credentials,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-
-    this.sheets = google.sheets({ version: 'v4', auth });
+  constructor(sheets: sheets_v4.Sheets, spreadsheetId: string, logger: import('winston').Logger) {
+    this.sheets = sheets;
+    this.spreadsheetId = spreadsheetId;
+    this.logger = logger;
   }
 
   async appendRow(payload: Payload) {
-    if (!payload.mode || !sheetsMap[payload.mode]) {
-      throw new Error('Invalid mode');
+    if (!payload.mode || !this.spreadsheetId) {
+      throw new Error('Invalid mode or spreadsheet ID');
     }
 
-    const spreadsheetId = sheetsMap[payload.mode];
+    // Map mode to specific sheet tab
+    const rangeMap: Record<Mode, string> = {
+      simulator: 'Simulator!A1',
+      devis_form: 'DevisForm!A1',
+    };
 
-    // Map payload to row depending on the mode
+    const range = rangeMap[payload.mode];
+    if (!range) {
+      throw new Error(`No range defined for mode: ${payload.mode}`);
+    }
+
     let row: any[] = [];
     if (payload.mode === 'simulator') {
+      const {
+        submittedAt,
+        fullname,
+        email,
+        phone,
+        project,
+        canton,
+        postal = 'N/A',
+        postalCity = 'N/A',
+        buildingType = 'N/A',
+        currentSystem = 'N/A',
+        power = 0,
+        pacType = 'N/A',
+        ownerStatus = 'N/A',
+        installationType = 'N/A',
+        serviceYear = 'N/A',
+        hasCECB = false,
+        autoconsommation = 0,
+        pvAid = 0,
+        hpAid = 0,
+        communal = 0,
+        total = 0,
+        notes = 'N/A',
+      } = payload as SimulatorPayload;
       row = [
-        payload.submittedAt,
-        payload.fullname,
-        payload.email,
-        payload.phone,
-        payload.project,
-        payload.canton,
-        payload.postal || 'N/A',
-        payload.postalCity || 'N/A',
-        payload.buildingType || 'N/A',
-        payload.currentSystem || 'N/A',
-        payload.power || 0,
-        payload.pacType || 'N/A',
-        payload.ownerStatus || 'N/A',
-        payload.installationType || 'N/A',
-        payload.serviceYear || 'N/A',
-        payload.hasCECB || false,
-        payload.autoconsommation || 0,
-        payload.pvAid || 0,
-        payload.hpAid || 0,
-        payload.communal || 0,
-        payload.total || 0,
-        payload.notes || 'N/A',
+        submittedAt,
+        fullname,
+        email,
+        phone,
+        project,
+        canton,
+        postal,
+        postalCity,
+        buildingType,
+        currentSystem,
+        power,
+        pacType,
+        ownerStatus,
+        installationType,
+        serviceYear,
+        hasCECB,
+        autoconsommation,
+        pvAid,
+        hpAid,
+        communal,
+        total,
+        notes,
       ];
     } else if (payload.mode === 'devis_form') {
-      row = [
-        payload.submittedAt,
-        payload.name,
-        payload.email,
-        payload.phone,
-        payload.projectType,
-        payload.codepostal,
-        payload.details,
-      ];
+      const { submittedAt, name, email, phone, projectType, codepostal, details } = payload as DevisFormPayload;
+      row = [submittedAt, name, email, phone, projectType, codepostal, details];
     }
 
     await this.sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: 'Sheet1', // adjust if you want a specific tab
+      spreadsheetId: this.spreadsheetId,
+      range,
       valueInputOption: 'RAW',
       requestBody: { values: [row] },
     });
 
-    console.log(`Row appended for mode: ${payload.mode}`);
+    this.logger.info(`Row appended to ${range} for mode: ${payload.mode}`);
   }
 }
