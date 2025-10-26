@@ -19,6 +19,6 @@ app.post('/submit', async (req: any, res: any) => {
 });
 
 app.listen(5678, () => {
-  console.log('Backend running on http://localhost:5678');
+  console.log('Backend running on https://eco-boost-swiss.vercel.app/');
 });
 

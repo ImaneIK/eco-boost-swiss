@@ -469,7 +469,7 @@ const ImprovedSubventionsSection = () => {
     };
 
     // Step 4: Send to n8n webhook (with error handling)
-    const webhookURL = "http://localhost:5678/submit";
+    const webhookURL = "https://eco-boost-swiss.vercel.app/api/submit";
     if (webhookURL) {
       fetch(webhookURL, {
         method: "POST",

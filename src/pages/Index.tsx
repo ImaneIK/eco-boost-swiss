@@ -118,7 +118,7 @@ export default function Index() {
 
     try {
 
-     const webhookURL = "http://localhost:5678/submit";
+     const webhookURL = "https://eco-boost-swiss.vercel.app/api/submit";
       if (webhookURL) {
         fetch(webhookURL, {
           method: "POST",
