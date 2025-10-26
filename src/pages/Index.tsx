@@ -118,7 +118,7 @@ export default function Index() {
 
     try {
 
-     const webhookURL = "https://eco-boost-swiss.vercel.app/api/submit";
+     const webhookURL = import.meta.env.VITE_API_URL;
       if (webhookURL) {
         fetch(webhookURL, {
           method: "POST",
