@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "comparatifdevis",
+  "private_key_id": "85da4843662d1a9e1c9126aaabb9d4b212e75c09",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC8DQBpXKeG5f4t\n56maJ4GXxkyjJIeDk9xursFQspJaDx66hRcU3Q53Rj8X9HG+hH1Kkip359qXRA3v\nbi/Y94YLNK3QKByGGHGjWtubqenHovGrriBTSXfhgY2m5fYegVivgUnnbxtj/FiX\nEBww1uWMoKCu3cgz6Xx98TItq0SnWJ4TVAFbJ479u4dqi+Ge42b56t6MPDAVbVbb\ndDRBE/oPaBqbEn5kQwcWzkKkqQ8Y9SX/a045xAgQYErkx6VXLjS4xtzdhfN4+aQ/\nRx3PjLeSi2H3NlFgVcz8775mQwas/pbTFyYxKb/A3JxOIr/2Yx6ln5TVmAqobBU0\nBo0GgoX1AgMBAAECggEAVCy/s+npBU26/qJVfS7U5/K4CEjILgIIKDUqTCx6rTxa\nZWRApjKjEInNoTPmnECi8rfFscGDS7WHRVb9rPFzO13btbLWvcGAUH5Rkfa3MgkC\ng3YgexeGRVdf6EbEafg9EeZeBe3qhVGF+CyaadQvkUivVEbrIC2R77AA5Ydl5j/T\nePmmn3ecPJjL7t17eaHhml61CPzdFuFd7rhk8qwg6T2L+t4Mv1Bdz0kXVhaRWOT6\nn9rOjesg1vAHKzKx3iWx+pJQKmZby15+dJx/0DN/l9pLZuLdowlDEkifO0sCGKkZ\ne5jL5t3Y0Tp6eWZBXn9IK0Y1AT8lHzAgR8YTQuhPiwKBgQD05t/H5ex7EbNqKAl/\nUVFqrYFCaOy51Yk3bxkSR0JpPuQc6Qzrgt/LEuiFoJHdTcsLfZ8ZVg2cM4q38uLI\nzXZb5azX+bouVpLxOHeWfhWEt2vp+zG6tb/gCmkTQhxjlxIywiiqH9QP8YMhBWxz\nDe2hiNLgwYUXN8XSkZmqWc2kTwKBgQDEkpf/lzOVkB9f9vjsbVUCsoCt+TSOmnyq\ndIRTRr9es/d/xDvmfuyRlBe8iw2YhPpLZ12F8MHeUO86t3qoaA38hd5Rc3dzoUrk\nuU0XozAR2CuBPefvOH1/saaONFdRy64OKfLJcOFhikjP2/V4WxB+dvJftJYBFMpy\nDkvjx1ksewKBgExPaGl8XmyWvmYUpajzaMAp4j4UPbdGL2SDjLdiVvI+c4wCnlEA\nTcWUVbnVp73ikKM6+IlHhCQo90+MMlhJlVjbPzlpCjeIKG9bnf/Zt9DL6qdU61D3\ncxtXgxhKIFhz6WrBjzQ7iLOTGL4AV6OeMm6EGNmJ03PBoDWVwuEO7IIHAoGAPpa6\nhOwcxZtdEg4uFgF91t0FMd+uR1WTKibtVyKonjvJK0pNFEgHhRbVM/hGfPCiTU39\nLj+JSwMUGOsAyAxRn7z0G5UbTJrnoMoLbOJN1PCycXVHmxiuhPEIqjCqOOYUZnge\n0Nr7ODZylpRfpVHBf7LZ23VBadi32PcKXN1FXG8CgYEA6MmU7KnY8MDPO0eg1jeK\nWKycEYE+FgBoYqZomtbSCQyq8gh2VPdU4Dcrj+AyZUpEz80CLPtLj9WhuBKI76QZ\nfMv9e8OPQ4FUM51TljYiK0y2X+zcGAukfEEX1svxitUyDQPA33gvW9ImiAQZhM1a\nYt3caHFmpEN/xkdMaG1T7yg=\n-----END PRIVATE KEY-----\n",
+  "client_email": "comparatifdevis@comparatifdevis.iam.gserviceaccount.com",
+  "client_id": "106159182841929929761",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/comparatifdevis%40comparatifdevis.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
