@@ -575,7 +575,7 @@ export default function Index() {
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            Des milliers de Suisses romands ont déjà fait confiance à notre service
+            Des centaines de Suisses romands ont déjà fait confiance à notre service
           </motion.p>
 
           <div className="mb-12 rounded-2xl overflow-hidden shadow-xl">
