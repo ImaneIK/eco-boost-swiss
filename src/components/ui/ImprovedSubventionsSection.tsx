@@ -502,7 +502,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
     };
 
     // Step 4: Send to n8n webhook (with error handling)
-    const webhookURL = import.meta.env.VITE_API_URL;
+    const webhookURL = `${import.meta.env.VITE_API_URL}/api/submit`;
     if (webhookURL) {
       fetch(webhookURL, {
         method: "POST",
@@ -511,10 +511,10 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
       })
       .then(response => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        console.log('n8n webhook sent successfully');
+        console.log('request sent successfully');
       })
       .catch(error => {
-        console.error("Erreur d’envoi vers n8n :", error);
+        console.error("Erreur d’envoi vers server :", error);
       });
     }
 

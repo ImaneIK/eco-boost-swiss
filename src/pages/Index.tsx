@@ -118,7 +118,7 @@ export default function Index() {
 
     try {
 
-     const webhookURL = import.meta.env.VITE_API_URL;
+     const webhookURL = `${import.meta.env.VITE_API_URL}/api/submit`;
       if (webhookURL) {
         fetch(webhookURL, {
           method: "POST",
@@ -127,10 +127,10 @@ export default function Index() {
         })
         .then(response => {
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          console.log('n8n webhook sent successfully');
+          console.log('request sent successfully');
         })
         .catch(error => {
-          console.error("Erreur d’envoi vers n8n :", error);
+          console.error("Erreur d’envoi vers server :", error);
         });
       }
 
