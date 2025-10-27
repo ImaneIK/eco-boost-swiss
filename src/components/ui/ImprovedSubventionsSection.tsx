@@ -2,26 +2,26 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import emailjs from '@emailjs/browser';
 
-
 interface FormData {
   projectType: string;
   buildingType: string;
   canton: string;
   postal: string;
-  postalCity?: string; // Optional, as it’s set conditionally
+  postalCity?: string;
   currentSystem: string;
-  power: string;
+  pvPower: number;
+  pacPower: number;
   pacType: string;
   ownerStatus: string;
   installationType: string;
   serviceYear: string;
   hasCECB: boolean;
-  autoconsommation: string;
+  autoconsommation: number;
+  insulationArea: number;
   fullname: string;
   email: string;
   phone: string;
 }
-
 
 interface PACResult {
   type: string;
@@ -31,45 +31,51 @@ interface PACResult {
   estimated_subvention: number;
   fossil_replacement_bonus: number;
   total_estimated: number;
+  federal: number;
+  cantonal: number;
 }
 
 const ImprovedSubventionsSection = () => {
   const [showSimulator, setShowSimulator] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-const [formData, setFormData] = useState<FormData>({
-  projectType: 'pv',
-  buildingType: 'house',
-  canton: 'VD',
-  postal: '',
-  postalCity: '', // Add this to match the interface
-  currentSystem: 'fuel',
-  power: '',
-  pacType: 'air-eau',
-  ownerStatus: 'owner',
-  installationType: '',
-  serviceYear: '2025',
-  hasCECB: false,
-  autoconsommation: '',
-  fullname: '',
-  email: '',
-  phone: ''
-});
+  const [formData, setFormData] = useState<FormData>({
+    projectType: 'pv',
+    buildingType: 'house',
+    canton: 'VD',
+    postal: '',
+    postalCity: '',
+    currentSystem: 'fuel',
+    pvPower: 0,
+    pacPower: 0,
+    pacType: 'air-eau',
+    ownerStatus: 'owner',
+    installationType: '',
+    serviceYear: '2025',
+    hasCECB: false,
+    autoconsommation: 0,
+    insulationArea: 0,
+    fullname: '',
+    email: '',
+    phone: ''
+  });
 
   const [showResult, setShowResult] = useState(false);
   const [simulatorResult, setSimulatorResult] = useState({
     pvAid: 0,
     hpAid: 0,
     communal: 0,
+    federalAid: 0,
+    cantonalPVAid: 0,
+    cantonalHPAid: 0,
     total: 0,
     notes: ''
   });
 
-  // Updated DATA for 2025 based on current subsidies
   const DATA = {
     cantons: {
       GE: {
-        pv_chf_per_kwc_min: 200,
-        pv_chf_per_kwc_max: 400,
+        pv_chf_per_kwc_min: 0,
+        pv_chf_per_kwc_max: 0,
         pv_prime_max: 6000,
         pac_air_eau_base: 3000,
         pac_air_eau_per_kw: 400,
@@ -79,20 +85,24 @@ const [formData, setFormData] = useState<FormData>({
         cecb_bonus_min: 500,
         cecb_bonus_max: 1000,
         fossil_replacement_bonus: 1500,
-        conditions: "Demande avant travaux; CECB recommandé; Prime SIG reconduite"
+        communal_pv_range: [1000, 2000],
+        communal_pac_range: [1000, 3000],
+        conditions: "Demande avant travaux; CECB recommandé; Prime SIG reconduite (20% RU fédéral). Budget limité."
       },
       VD: {
-        pv_chf_per_kwc_min: 200,
-        pv_chf_per_kwc_max: 350,
-        pv_prime_max: 6000,
-        pac_air_eau_base: 8000,
-        pac_air_eau_per_kw: 0,
-        pac_sol_eau_base: 10000,
-        pac_sol_eau_per_kw: 0,
+        pv_chf_per_kwc_min: 0,
+        pv_chf_per_kwc_max: 0,
+        pv_prime_max: 0,
+        pac_air_eau_base: 5000,
+        pac_air_eau_per_kw: 400,
+        pac_sol_eau_base: 7500,
+        pac_sol_eau_per_kw: 600,
         isolation_chf_per_m2: 60,
         cecb_bonus: 750,
-        fossil_replacement_bonus: 1500,
-        conditions: "Programme Bâtiments VD; CECB requis; jusqu'à CHF 8'000 pour PAC air-eau"
+        fossil_replacement_bonus: 0,
+        communal_pv_range: [1000, 2000],
+        communal_pac_range: [1000, 3000],
+        conditions: "Programme Bâtiments VD; CECB obligatoire pour PAC; fixed CHF 5'000 air-eau ≤15kW fossile; PV subventionné si isolation (M-01). Budget limité."
       },
       VS: {
         pv_chf_per_kwc_min: 250,
@@ -105,7 +115,9 @@ const [formData, setFormData] = useState<FormData>({
         isolation_chf_per_m2: 50,
         cecb_bonus: 500,
         fossil_replacement_bonus: 2000,
-        conditions: "Remplacement d’énergie fossile priorisé; CHF 9'000 pour PAC air-eau"
+        communal_pv_range: [1000, 2000],
+        communal_pac_range: [1000, 3000],
+        conditions: "Remplacement fossile priorisé; CHF 9'000 PAC air-eau. Budget limité."
       },
       FR: {
         pv_chf_per_kwc_min: 200,
@@ -113,12 +125,14 @@ const [formData, setFormData] = useState<FormData>({
         pv_prime_max: 5000,
         pac_air_eau_base: 3500,
         pac_air_eau_per_kw: 150,
-        pac_sol_eau_base: 8000,
-        pac_sol_eau_per_kw: 0,
+        pac_sol_eau_base: 6000,
+        pac_sol_eau_per_kw: 400,
         isolation_chf_per_m2: 60,
         cecb_bonus: 700,
         fossil_replacement_bonus: 1000,
-        conditions: "CECB obligatoire pour rénovation; CHF 3'500 + CHF 150/kW pour PAC air-eau"
+        communal_pv_range: [1000, 2000],
+        communal_pac_range: [1000, 3000],
+        conditions: "CECB obligatoire rénovation; CHF 3'500 +150/kW PAC air-eau. Budget limité."
       },
       NE: {
         pv_chf_per_kwc_min: 180,
@@ -127,11 +141,13 @@ const [formData, setFormData] = useState<FormData>({
         pac_air_eau_base: 3500,
         pac_air_eau_per_kw: 150,
         pac_sol_eau_base: 5000,
-        pac_sol_eau_per_kw: 0,
+        pac_sol_eau_per_kw: 150,
         isolation_chf_per_m2: 50,
         cecb_bonus: 500,
         fossil_replacement_bonus: 1000,
-        conditions: "CECB Plus recommandé; CHF 3'500 + CHF 150/kW pour PAC air-eau"
+        communal_pv_range: [1000, 2000],
+        communal_pac_range: [1000, 3000],
+        conditions: "CECB Plus recommandé; CHF 3'500 +150/kW PAC air-eau. Budget limité."
       },
       JU: {
         pv_chf_per_kwc_min: 200,
@@ -144,17 +160,18 @@ const [formData, setFormData] = useState<FormData>({
         isolation_chf_per_m2: 45,
         cecb_bonus: 500,
         fossil_replacement_bonus: 1000,
-        conditions: "Soumission avant travaux; CHF 2'500 + CHF 100/kW pour PAC air-eau"
+        communal_pv_range: [1000, 2000],
+        communal_pac_range: [1000, 3000],
+        conditions: "Soumission avant travaux; CHF 2'500 +100/kW PAC air-eau. Budget limité."
       }
     },
     federal: {
       pronovo_pru_per_kwc_estimate_min: 200,
       pronovo_pru_per_kwc_estimate_max: 600,
-      programme_batiments_support_estimated: "variable selon dossier; up to 30% investment"
+      programme_batiments_support_estimated: "variable; up to 30% investissement (PAC intégré)"
     }
   };
 
-  // Postal codes data per canton (major cities/communes)
   const postalData = {
     VD: [
       { code: '1000', city: 'Lausanne' },
@@ -201,7 +218,6 @@ const [formData, setFormData] = useState<FormData>({
       { code: '3970', city: 'Salgesch' },
       { code: '3900', city: 'Brig-Glis' },
       { code: '3930', city: 'Visp' },
-      { code: '3930', city: 'Viège' },
       { code: '3940', city: 'Saxon' },
       { code: '3952', city: 'Savièse' },
       { code: '3953', city: 'Evolène' },
@@ -260,7 +276,6 @@ const [formData, setFormData] = useState<FormData>({
     ]
   };
 
-  // Utilitaires
   const avgRange = (range) => {
     if (!Array.isArray(range)) return range;
     return (range[0] + range[1]) / 2;
@@ -271,19 +286,18 @@ const [formData, setFormData] = useState<FormData>({
     return min || max;
   };
 
-  // Enhanced Calcul PV with new inputs
-  const calculatePV = (cantonCode, kwc, installationType = '', hasCECB = false, autoconsommation = 0, serviceYear = 2025) => {
+  const calculatePV = (cantonCode, kwc, installationType = '', hasCECB = false, autoconsommation = 0, serviceYear = 2025, insulationArea = 0) => {
     let reduction = 1;
     if (serviceYear > 2025) {
-      reduction = 1 - (serviceYear - 2025) * 0.05; // Assume 5% reduction per year
+      reduction = 1 - (serviceYear - 2025) * 0.05;
     }
     const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
     let pv_rate_min = c.pv_chf_per_kwc_min;
     let pv_rate_max = c.pv_chf_per_kwc_max;
     if (installationType === 'integre') {
-      pv_rate_max += 100; // Bonus for integrated
+      pv_rate_max += 100;
     } else if (installationType === 'toit-plat') {
-      pv_rate_min -= 50; // Adjustment for flat roof
+      pv_rate_min -= 50;
     }
     const pv_rate = chooseWithin(pv_rate_min * reduction, pv_rate_max * reduction);
     const estimated_cost_offset = Math.round(pv_rate * kwc);
@@ -292,14 +306,31 @@ const [formData, setFormData] = useState<FormData>({
     const federal_max = DATA.federal.pronovo_pru_per_kwc_estimate_max * kwc * reduction;
     const federal_estimate = Math.round((federal_min + federal_max) / 2);
 
-    let total_pv_subvention_estimated = prime + federal_estimate;
-    if (hasCECB) {
-      const cecb_bonus = c.cecb_bonus ? c.cecb_bonus : avgRange([c.cecb_bonus_min, c.cecb_bonus_max]);
-      total_pv_subvention_estimated += cecb_bonus;
+    let cantonal = 0;
+    if (cantonCode === 'GE') {
+      cantonal = Math.min(c.pv_prime_max || 0, 0.2 * federal_estimate);
+      if (hasCECB) {
+        const cecb_bonus = c.cecb_bonus ? c.cecb_bonus : avgRange([c.cecb_bonus_min, c.cecb_bonus_max]);
+        cantonal += cecb_bonus;
+      }
+    } else if (cantonCode !== 'VD') {
+      cantonal = prime;
+      if (hasCECB) {
+        const cecb_bonus = c.cecb_bonus ? c.cecb_bonus : avgRange([c.cecb_bonus_min, c.cecb_bonus_max]);
+        cantonal += cecb_bonus;
+      }
+      if (autoconsommation >= 30) {
+        cantonal += Math.round(prime * 0.1);
+      }
+    } else if (cantonCode === 'VD' && insulationArea > 0) {
+      cantonal = Math.round(insulationArea * c.isolation_chf_per_m2);
+      if (hasCECB) {
+        cantonal += c.cecb_bonus;
+      }
     }
-    if (autoconsommation > 30) {
-      total_pv_subvention_estimated += Math.round(prime * 0.1); // 10% bonus for high self-consumption
-    }
+
+    const federal = federal_estimate;
+    const total_pv_subvention_estimated = federal + cantonal;
 
     return {
       kwc,
@@ -307,98 +338,145 @@ const [formData, setFormData] = useState<FormData>({
       estimated_offset_chf: estimated_cost_offset,
       prime_cantonale_chf: prime,
       federal_pronovo_estimate_chf: federal_estimate,
+      federal,
+      cantonal,
       total_pv_subvention_estimated
     };
   };
 
-  // Calcul PAC (unchanged)
-const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: boolean): PACResult => {
-  const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
-  const result: PACResult = { type, base: 0, per_kw: 0, kw: 0, estimated_subvention: 0, fossil_replacement_bonus: 0, total_estimated: 0 };
+  const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: boolean, hasCECB: boolean): PACResult => {
+    const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
+    const result: PACResult = { type, base: 0, per_kw: 0, kw: 0, estimated_subvention: 0, fossil_replacement_bonus: 0, total_estimated: 0, federal: 0, cantonal: 0 };
 
-  let base: number, per_kw: number;
-  if (type === 'air-eau') {
-    base = c.pac_air_eau_base || 0;
-    per_kw = c.pac_air_eau_per_kw || 0;
-  } else if (type === 'sol-eau') {
-    base = c.pac_sol_eau_base || 0;
-    per_kw = c.pac_sol_eau_per_kw || 0;
-  } else {
-    throw new Error('Type PAC inconnu (air-eau | sol-eau)');
-  }
+    let base: number, per_kw: number;
+    if (type === 'air-eau') {
+      base = c.pac_air_eau_base || 0;
+      per_kw = c.pac_air_eau_per_kw || 0;
+    } else if (type === 'sol-eau') {
+      base = c.pac_sol_eau_base || 0;
+      per_kw = c.pac_sol_eau_per_kw || 0;
+    } else {
+      throw new Error('Type PAC inconnu (air-eau | sol-eau)');
+    }
 
-  const perKWPart = kw ? Math.round(per_kw * kw) : 0;
-  const estimated_subvention = base + perKWPart;
-  result.base = base;
-  result.per_kw = per_kw;
-  result.kw = kw;
-  result.estimated_subvention = estimated_subvention;
-  const fossilBonus = isFossil ? (c.fossil_replacement_bonus || 0) : 0;
-  result.fossil_replacement_bonus = fossilBonus;
-  result.total_estimated = estimated_subvention + fossilBonus;
+    let estimated_subvention;
+    if (kw <= 15) {
+      estimated_subvention = base;
+    } else {
+      estimated_subvention = base + Math.round(per_kw * kw);
+    }
 
-  return result;
-};
+    if (cantonCode === 'VD' && !hasCECB) {
+      estimated_subvention = 0;
+    }
 
+    result.base = base;
+    result.per_kw = per_kw;
+    result.kw = kw;
+    result.estimated_subvention = estimated_subvention;
 
-  const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    let fossilBonus = 0;
+    if (isFossil && c.fossil_replacement_bonus > 0) {
+      fossilBonus = c.fossil_replacement_bonus;
+    }
+    result.fossil_replacement_bonus = fossilBonus;
+
+    let cecbBonus = 0;
+    if (cantonCode === 'VD' && hasCECB) {
+      cecbBonus = c.cecb_bonus || 0;
+    }
+
+    result.total_estimated = estimated_subvention + fossilBonus + cecbBonus;
+    result.federal = 0;
+    result.cantonal = estimated_subvention + fossilBonus + cecbBonus;
+
+    return result;
+  };
+
+  const handleChange = (field: keyof FormData, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: typeof value === 'string' && ['pvPower', 'pacPower', 'autoconsommation', 'insulationArea'].includes(field)
+        ? parseFloat(value) || 0
+        : value
+    }));
   };
 
   const handlePostalChange = (e) => {
     const code = e.target.value;
     const opt = postalData[formData.canton]?.find(o => o.code === code);
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       postal: code,
-      postalCity: opt ? opt.city : '' 
+      postalCity: opt ? opt.city : ''
     }));
   };
 
-  const handleNext = (step) => {
+  const handleNext = (step: number) => {
+    if (step === 3 && currentStep === 2) {
+      if (!formData.canton) {
+        alert('Veuillez sélectionner un canton.');
+        return;
+      }
+    }
+    if (step === 4 && currentStep === 3) {
+      if ((formData.projectType === 'pv' || formData.projectType === 'both') && formData.pvPower <= 0) {
+        alert('Veuillez entrer une puissance PV valide (supérieure à 0).');
+        return;
+      }
+      if ((formData.projectType === 'hp' || formData.projectType === 'both') && formData.pacPower <= 0) {
+        alert('Veuillez entrer une puissance PAC valide (supérieure à 0).');
+        return;
+      }
+      if ((formData.projectType === 'pv' || formData.projectType === 'both') && (formData.autoconsommation < 0 || formData.autoconsommation > 100)) {
+        alert('L’autoconsommation doit être entre 0 et 100 %.');
+        return;
+      }
+    }
+    if (step === 4 && currentStep === 3) {
+      if (formData.canton === 'VD' && (formData.projectType === 'pv' || formData.projectType === 'both') && formData.insulationArea <= 0) {
+        alert("Dans le canton de Vaud, une surface d'isolation est requise pour les subventions PV.");
+        return;
+      }
+    }
     setCurrentStep(step);
   };
 
-  const handlePrev = (step) => {
+  const handlePrev = (step: number) => {
     setCurrentStep(step);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Step 1: Validate and sanitize formData to control empty/undefined values
-    const data : FormData = { ...formData }; // Clone to avoid mutating original
-    
-    // Sanitize: Ensure all keys exist, trim strings, set safe defaults
-    const sanitizedData = {
-      projectType: (data.projectType || '').trim() || 'pv', // Default to 'pv' if empty
-      canton: (data.canton || '').trim() || 'VD', // Default canton
-      postal: (data.postal || '').trim(),
-      postalCity: (data.postalCity || '').trim(),
-      buildingType: (data.buildingType || '').trim() || 'house', // Default building type
-      currentSystem: (data.currentSystem || '').trim() || 'none', // Default system
-      power: parseFloat((data.power || '0').trim()) || (data.projectType === 'pv' ? 10 : 12), // Already has fallback, but ensure non-negative
-      pacType: (data.pacType || '').trim() || 'air-eau', // Default PAC type if empty
-      ownerStatus: (data.ownerStatus || '').trim() || 'owner', // Default status
-      installationType: (data.installationType || '').trim() || '',
-      serviceYear: (data.serviceYear || '').trim() || '2025',
-      hasCECB: !!data.hasCECB, // Boolean
-      autoconsommation: parseFloat((data.autoconsommation || '0').trim()) || 0,
-      fullname: (data.fullname || '').trim(),
-      email: (data.email || '').trim().toLowerCase(), // Normalize email
-      phone: (data.phone || '').trim().replace(/\D/g, ''), // Strip non-digits for phone
+
+    const sanitizedData: FormData = {
+      projectType: (formData.projectType || '').trim() || 'pv',
+      canton: (formData.canton || '').trim() || 'VD',
+      postal: (formData.postal || '').trim(),
+      postalCity: (formData.postalCity || '').trim(),
+      buildingType: (formData.buildingType || '').trim() || 'house',
+      currentSystem: (formData.currentSystem || '').trim() || 'none',
+      pvPower: parseFloat((formData.pvPower || 0).toString().trim()) || (formData.projectType === 'pv' || formData.projectType === 'both' ? 10 : 0),
+      pacPower: parseFloat((formData.pacPower || 0).toString().trim()) || (formData.projectType === 'hp' || formData.projectType === 'both' ? 12 : 0),
+      pacType: (formData.pacType || '').trim() || 'air-eau',
+      ownerStatus: (formData.ownerStatus || '').trim() || 'owner',
+      installationType: (formData.installationType || '').trim() || '',
+      serviceYear: (formData.serviceYear || '').trim() || '2025',
+      hasCECB: !!formData.hasCECB,
+      autoconsommation: parseFloat((formData.autoconsommation || 0).toString().trim()) || 0,
+      insulationArea: formData.projectType === 'hp' ? 0 : parseFloat((formData.insulationArea || 0).toString().trim()) || 0,
+      fullname: (formData.fullname || '').trim(),
+      email: (formData.email || '').trim().toLowerCase(),
+      phone: (formData.phone || '').trim().replace(/\D/g, '')
     };
 
-    // Early validation: Check required fields (prevent submit with empties)
     const requiredFields = ['fullname', 'email', 'phone', 'canton'];
     const missingFields = requiredFields.filter(field => !sanitizedData[field]);
     if (missingFields.length > 0) {
-      console.warn('Missing required fields:', missingFields); // Or set errors state
       alert(`Veuillez remplir: ${missingFields.join(', ')}`);
       return;
     }
 
-    // Validate email/phone basics (expand as needed)
     if (!/\S+@\S+\.\S+/.test(sanitizedData.email)) {
       alert('Email invalide');
       return;
@@ -408,7 +486,6 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
       return;
     }
 
-    // Step 2: Calculations with sanitized data (safer now)
     const effectiveCanton = sanitizedData.canton;
     const c = DATA.cantons[effectiveCanton] || DATA.cantons.VD;
     const project = sanitizedData.projectType;
@@ -416,68 +493,88 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
 
     let pv = null;
     let hp = null;
-    let subtotal = 0;
+    let federalAid = 0;
+    let cantonalPVAid = 0;
+    let cantonalHPAid = 0;
+
+    console.log('FormData:', sanitizedData);
 
     if (project === 'pv' || project === 'both') {
       pv = calculatePV(
-        effectiveCanton, 
-        sanitizedData.power, 
-        sanitizedData.installationType, 
-        sanitizedData.hasCECB, 
-        sanitizedData.autoconsommation, 
-        parseInt(sanitizedData.serviceYear)
+        effectiveCanton,
+        sanitizedData.pvPower,
+        sanitizedData.installationType,
+        sanitizedData.hasCECB,
+        sanitizedData.autoconsommation,
+        parseInt(sanitizedData.serviceYear),
+        sanitizedData.insulationArea
       );
-      subtotal += pv.total_pv_subvention_estimated || 0; // Fallback to 0 if calc returns null
+      federalAid += pv.federal || 0;
+      cantonalPVAid += pv.cantonal || 0;
     }
 
     if (project === 'hp' || project === 'both') {
-      hp = calculatePAC(effectiveCanton, sanitizedData.pacType, sanitizedData.power, isFossil);
-      subtotal += hp.total_estimated || 0;
+      hp = calculatePAC(effectiveCanton, sanitizedData.pacType, sanitizedData.pacPower, isFossil, sanitizedData.hasCECB);
+      console.log('PAC Inputs:', { pacPower: sanitizedData.pacPower, pacType: sanitizedData.pacType, hasCECB: sanitizedData.hasCECB });
+      console.log('PAC Result:', hp);
+      cantonalHPAid += hp.cantonal || 0;
     }
 
-    const total = subtotal;
-    const notes = c.conditions || 'Aucune note disponible';
-
+    const communal = 0;
+    const total = federalAid + cantonalPVAid + cantonalHPAid;
+    const originalConditions = c.conditions || 'Aucune note disponible';
+    const communalNote = `Subvention communale potentielle : CHF ${c.communal_pv_range ? c.communal_pv_range.join('–') : '1,000–3,000'} (PV), CHF ${c.communal_pac_range ? c.communal_pac_range.join('–') : '1,000–3,000'} (PAC), à vérifier avec un conseiller.`;
+    const pacFederalNote = hp ? ' Soutien fédéral intégré via Programme d\'impulsion 2025 pour PAC.' : '';
+    let notes = `${originalConditions} ${pacFederalNote}`;
+    if (!sanitizedData.hasCECB && (project === 'hp' || project === 'both')) {
+      notes += ' CECB obligatoire pour PAC (absent → éligibilité à vérifier).';
+    }
     const pvAid = pv ? pv.total_pv_subvention_estimated : 0;
     const hpAid = hp ? hp.total_estimated : 0;
 
-    setSimulatorResult({ 
-      pvAid, 
-      hpAid, 
-      communal: 0, 
-      total, 
-      notes 
+    setSimulatorResult({
+      pvAid,
+      hpAid,
+      communal,
+      federalAid,
+      cantonalPVAid,
+      cantonalHPAid,
+      total,
+      notes
     });
     setShowResult(true);
 
-    // Step 3: Prepare payload with no empties (all values are now defined)
     const payload = {
       mode: 'simulator',
       submittedAt: new Date().toISOString(),
-      project: project,
+      project,
       canton: effectiveCanton,
       postal: sanitizedData.postal || 'Non spécifié',
       postalCity: sanitizedData.postalCity || 'Non spécifié',
       buildingType: sanitizedData.buildingType,
       currentSystem: sanitizedData.currentSystem,
-      power: sanitizedData.power,
+      pvPower: sanitizedData.pvPower,
+      pacPower: sanitizedData.pacPower,
       pacType: sanitizedData.pacType,
       ownerStatus: sanitizedData.ownerStatus,
       installationType: sanitizedData.installationType,
       serviceYear: sanitizedData.serviceYear,
       hasCECB: sanitizedData.hasCECB,
       autoconsommation: sanitizedData.autoconsommation,
+      insulationArea: sanitizedData.insulationArea,
       fullname: sanitizedData.fullname,
       email: sanitizedData.email,
       phone: sanitizedData.phone,
       pvAid,
       hpAid,
-      communal: 0,
+      federalAid,
+      cantonalPVAid,
+      cantonalHPAid,
+      communal,
       total,
       notes
     };
 
-    // Step 4: Send to n8n webhook (with error handling)
     const webhookURL = `${import.meta.env.VITE_API_URL}/api/submit`;
     if (webhookURL) {
       fetch(webhookURL, {
@@ -485,55 +582,55 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       })
-      .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        console.log('request sent successfully');
-      })
-      .catch(error => {
-        console.error("Erreur d’envoi vers server :", error);
-      });
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          console.log('Request sent successfully');
+        })
+        .catch(error => {
+          console.error("Erreur d’envoi vers server :", error);
+        });
     }
 
-    // Step 5: Send email via EmailJS (with fallbacks for empty results)
     const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
     const emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_SIMULATOR;
     const emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
     if (emailjsServiceId && emailjsTemplateId && emailjsPublicKey) {
-      const formattedDate = new Date().toLocaleString('fr-CH', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      const formattedDate = new Date().toLocaleString('fr-CH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
       }).replace(/\//g, '.');
-
-      const formattedPvAid = pvAid.toLocaleString('fr-CH');
-      const formattedHpAid = hpAid.toLocaleString('fr-CH');
-      const formattedTotal = total.toLocaleString('fr-CH');
 
       const emailParams = {
         fullname: sanitizedData.fullname || 'Anonyme',
         email: sanitizedData.email,
         phone: sanitizedData.phone || 'Non fourni',
-        project: project,
+        project,
         canton: effectiveCanton,
         postal: sanitizedData.postal || 'Non spécifié',
         postalCity: sanitizedData.postalCity || 'Non spécifiée',
         buildingType: sanitizedData.buildingType,
         currentSystem: sanitizedData.currentSystem,
-        power: sanitizedData.power,
+        pvPower: sanitizedData.pvPower || 'Non spécifié',
+        pacPower: sanitizedData.pacPower || 'Non spécifié',
         pacType: sanitizedData.pacType,
         ownerStatus: sanitizedData.ownerStatus,
         installationType: sanitizedData.installationType || 'Non spécifié',
         serviceYear: sanitizedData.serviceYear,
         hasCECB: sanitizedData.hasCECB ? 'Oui' : 'Non',
         autoconsommation: sanitizedData.autoconsommation || 'Non spécifié',
+        insulationArea: sanitizedData.insulationArea || 'Non spécifié',
         submittedAt: formattedDate,
-        pvAid: formattedPvAid,
-        hpAid: formattedHpAid,
-        communal: 0,
-        total: formattedTotal,
+        pvAid: pvAid.toLocaleString('fr-CH'),
+        hpAid: hpAid.toLocaleString('fr-CH'),
+        federalAid: federalAid.toLocaleString('fr-CH'),
+        cantonalPVAid: cantonalPVAid.toLocaleString('fr-CH'),
+        cantonalHPAid: cantonalHPAid.toLocaleString('fr-CH'),
+        communal: communal.toLocaleString('fr-CH'),
+        total: total.toLocaleString('fr-CH'),
         notes: notes || 'Aucune note'
       };
 
@@ -550,6 +647,10 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
   };
 
   const handleDownloadPDF = () => {
+    const projectLabel = formData.projectType === 'both' ? 'Panneaux solaires et Pompe à chaleur' :
+                         formData.projectType === 'pv' ? 'Panneaux solaires' :
+                         formData.projectType === 'hp' ? `Pompe à chaleur (${formData.pacType})` : formData.projectType;
+
     const printContent = `
       <html>
         <head>
@@ -563,6 +664,9 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
             strong { color: #065f46; }
             .total { font-size: 18px; margin-top: 10px; }
             footer { margin-top: 30px; font-size: 12px; color: #6b6b6b; }
+            .sub-li { margin-left: 20px; font-size: 14px; padding-left: 8px; border-left: 2px solid; }
+            .federal { border-left-color: #3b82f6; }
+            .cantonal { border-left-color: #10b981; }
           </style>
         </head>
         <body>
@@ -571,18 +675,28 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
             <strong>Estimation rapide</strong>
             <p>D'après vos informations (canton <strong>${formData.canton}</strong>, code postal <strong>${formData.postal || 'Non spécifié'}</strong>), l'estimation indicative est :</p>
             <ul>
-              ${simulatorResult.pvAid > 0 ? `<li>🔆 Panneaux solaires : <strong>CHF ${simulatorResult.pvAid.toLocaleString()}</strong></li>` : ''}
-              ${simulatorResult.hpAid > 0 ? `<li>🔥 Pompe à chaleur : <strong>CHF ${simulatorResult.hpAid.toLocaleString()}</strong></li>` : ''}
+              ${simulatorResult.pvAid > 0 ? `
+                <li style="font-weight: 500;">🔆 Panneaux solaires :</li>
+                ${simulatorResult.federalAid > 0 ? `<li class="sub-li federal">🇨🇭 Fédéral (Pronovo/SuisseEnergie) : <strong>CHF ${simulatorResult.federalAid.toLocaleString('fr-CH')}</strong></li>` : ''}
+                <li class="sub-li cantonal">🟢 Cantonal : <strong>CHF ${simulatorResult.cantonalPVAid.toLocaleString('fr-CH')} (inclut ${formData.insulationArea} m² d’isolation à CHF ${DATA.cantons[formData.canton].isolation_chf_per_m2}/m²${formData.hasCECB ? ' et bonus CECB' : ''})</strong></li>
+              ` : ''}
+              ${simulatorResult.hpAid > 0 ? `
+                <li style="font-weight: 500;">🔥 Pompe à chaleur (${formData.pacType}) :</li>
+                <li class="sub-li cantonal">🟢 Cantonal (intégrant soutien fédéral 2025) : <strong>CHF ${simulatorResult.cantonalHPAid.toLocaleString('fr-CH')}</strong></li>
+              ` : ''}
             </ul>
-            <p class="total"><strong>Total estimé : CHF ${simulatorResult.total.toLocaleString()}</strong></p>
+            ${simulatorResult.communal === 0 ? `
+              <p><strong>Subvention communale potentielle :</strong> CHF ${DATA.cantons[formData.canton]?.communal_pv_range?.join('–') || '1,000–3,000'} (PV), CHF ${DATA.cantons[formData.canton]?.communal_pac_range?.join('–') || '1,000–3,000'} (PAC), à vérifier avec un conseiller.</p>
+            ` : ''}
+            <p class="total"><strong>Total estimé : CHF ${simulatorResult.total.toLocaleString('fr-CH')}</strong></p>
             <p>Ce résultat est indicatif. Un conseiller vérifiera les primes exactes (communes, conditions techniques, certificats).</p>
             <p><strong>Conditions :</strong> ${simulatorResult.notes}</p>
           </div>
           <footer>
             <p>comparatifdevis.ch - Rapport généré le ${new Date().toLocaleDateString('fr-CH')}</p>
-            <p>Projet: ${(formData.projectType =="both") ? 'Panneaux solaires et Pompe à chaleur' : formData.projectType}, Puissance: ${formData.power || 'Estimation'}, Système actuel: ${formData.currentSystem}</p>
+            <p>Projet: ${projectLabel}, Puissance PV: ${formData.pvPower || 'Non spécifié'} kWc, Puissance PAC: ${formData.pacPower || 'Non spécifié'} kW, Système actuel: ${formData.currentSystem}</p>
             <p>Contact: ${formData.fullname} - ${formData.email} - Code postal: ${formData.postal || 'Non spécifié'}</p>
-            <p>Type d'installation: ${formData.installationType || 'Non spécifié'}, Année: ${formData.serviceYear}, CECB: ${formData.hasCECB ? 'Oui' : 'Non'}, Autoconsommation: ${formData.autoconsommation || 'Non spécifié'}%</p>
+            <p>Type d'installation: ${formData.installationType || 'Non spécifié'}, Année: ${formData.serviceYear}, CECB: ${formData.hasCECB ? 'Oui' : 'Non'}, Autoconsommation: ${formData.autoconsommation || 'Non spécifié'}%, Insulation: ${formData.projectType === 'hp' ? 'Non spécifié' : formData.insulationArea || 'Non spécifié'} m²</p>
           </footer>
         </body>
       </html>
@@ -622,7 +736,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
             Subventions & aides disponibles
           </h3>
           <p className="text-base text-green-700 mb-8">
-            Les aides varient selon le codepostale. Exemples :
+            Les aides varient selon le code postal. Exemples :
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -652,45 +766,45 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
           </div>
 
           {!showSimulator && (
-            <section 
-              id="intro-aides" 
-              style={{ 
-                background: 'linear-gradient(180deg, #f0fdf4, #dcfce7)', 
-                padding: '36px 20px', 
-                borderRadius: '12px', 
-                maxWidth: '1100px', 
-                margin: '24px auto', 
-                fontFamily: 'Inter, system-ui, Arial', 
-                color: '#102020' 
+            <section
+              id="intro-aides"
+              style={{
+                background: 'linear-gradient(180deg, #f0fdf4, #dcfce7)',
+                padding: '36px 20px',
+                borderRadius: '12px',
+                maxWidth: '1100px',
+                margin: '24px auto',
+                fontFamily: 'Inter, system-ui, Arial',
+                color: '#102020'
               }}
             >
               <div style={{ display: 'flex', gap: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div 
-                  aria-hidden="true" 
-                  style={{ 
-                    flex: '0 0 68px', 
-                    height: '68px', 
-                    borderRadius: '12px', 
-                    background: '#ecfdf5', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    boxShadow: '0 6px 18px rgba(16,32,32,0.06)' 
+                <div
+                  aria-hidden="true"
+                  style={{
+                    flex: '0 0 68px',
+                    height: '68px',
+                    borderRadius: '12px',
+                    background: '#ecfdf5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 6px 18px rgba(16,32,32,0.06)'
                   }}
                 >
-                  <svg 
-                    width="36" 
-                    height="36" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg" 
+                  <svg
+                    width="36"
+                    height="36"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
                     style={{ display: 'block' }}
                   >
-                    <path 
-                      d="M3 12h6M12 3v6M21 12h-6M12 21v-6" 
-                      stroke="#10b981" 
-                      strokeWidth="1.6" 
-                      strokeLinecap="round" 
+                    <path
+                      d="M3 12h6M12 3v6M21 12h-6M12 21v-6"
+                      stroke="#10b981"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   </svg>
@@ -706,34 +820,34 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
                   </p>
 
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button 
-                      onClick={handleShowSimulator} 
-                      className="btn-primary" 
-                      style={{ 
-                        background: '#10b981', 
-                        color: '#ffffff', 
-                        padding: '10px 14px', 
-                        borderRadius: '10px', 
-                        fontWeight: 700, 
-                        textDecoration: 'none', 
-                        boxShadow: '0 6px 18px rgba(16,185,129,0.18)', 
-                        border: 'none', 
-                        cursor: 'pointer' 
+                    <button
+                      onClick={handleShowSimulator}
+                      className="btn-primary"
+                      style={{
+                        background: '#10b981',
+                        color: '#ffffff',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        boxShadow: '0 6px 18px rgba(16,185,129,0.18)',
+                        border: 'none',
+                        cursor: 'pointer'
                       }}
                     >
                       Lancer la simulation
                     </button>
 
-                    <a 
-                      href="mailto:contact@comparatifdevis.com " 
-                      style={{ 
-                        background: 'transparent', 
-                        border: '1px solid #d1fae5', 
-                        color: '#065f46', 
-                        padding: '10px 14px', 
-                        borderRadius: '10px', 
-                        fontWeight: '600', 
-                        textDecoration: 'none' 
+                    <a
+                      href="mailto:contact@comparatifdevis.com"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid #d1fae5',
+                        color: '#065f46',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        fontWeight: '600',
+                        textDecoration: 'none'
                       }}
                     >
                       Contactez un conseiller
@@ -925,28 +1039,41 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
                                   <option value="air-eau">Air-eau</option>
                                   <option value="sol-eau">Sol-eau</option>
                                 </select>
+
+                                <label className="block mt-3 font-semibold text-green-800 text-sm">Puissance de la PAC (kW)</label>
+                                <input
+                                  type="number"
+                                  name="pacPower"
+                                  placeholder="ex: 12"
+                                  min="0"
+                                  step="0.1"
+                                  value={formData.pacPower}
+                                  onChange={(e) => handleChange('pacPower', e.target.value)}
+                                  className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
+                                />
+                                <p className="text-xs text-green-600 mt-1.5 block">
+                                  Puissance en kW (ex: petite 8 kW, moyenne 12 kW, grande 20 kW+)
+                                </p>
                               </>
                             )}
 
-                            <label className="block mt-3 font-semibold text-green-800 text-sm">
-                              {formData.projectType === 'pv' ? 'Puissance installée (kWc)' : 'Puissance de la PAC (kW)'}
-                            </label>
-                            <input
-                              type="number"
-                              name="power"
-                              placeholder={formData.projectType === 'pv' ? "ex: 10" : "ex: 12"}
-                              min="0"
-                              step="0.1"
-                              value={formData.power}
-                              onChange={(e) => handleChange('power', e.target.value)}
-                              className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
-                            />
-                            <p className="text-xs text-green-600 mt-1.5 block">
-                              {formData.projectType === 'pv' ? 'Puissance en kWc (ex: petite installation 5 kWc, moyenne 10 kWc, grande 20 kWc+)' : 'Puissance en kW (ex: petite 8 kW, moyenne 12 kW, grande 20 kW+)'}
-                            </p>
-
                             {(formData.projectType === 'pv' || formData.projectType === 'both') && (
                               <>
+                                <label className="block mt-3 font-semibold text-green-800 text-sm">Puissance installée PV (kWc)</label>
+                                <input
+                                  type="number"
+                                  name="pvPower"
+                                  placeholder="ex: 10"
+                                  min="0"
+                                  step="0.1"
+                                  value={formData.pvPower}
+                                  onChange={(e) => handleChange('pvPower', e.target.value)}
+                                  className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
+                                />
+                                <p className="text-xs text-green-600 mt-1.5 block">
+                                  Puissance en kWc (ex: petite installation 5 kWc, moyenne 10 kWc, grande 20 kWc+)
+                                </p>
+
                                 <label className="block mt-3 font-semibold text-green-800 text-sm">Type d’installation</label>
                                 <select
                                   name="installationType"
@@ -972,6 +1099,24 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
                                   onChange={(e) => handleChange('autoconsommation', e.target.value)}
                                   className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
                                 />
+                                <p className="text-xs text-green-600 mt-1.5 block">
+                                  Pourcentage d’autoconsommation (ex: 30–70 %, selon usage)
+                                </p>
+
+                                <label className="block mt-3 font-semibold text-green-800 text-sm">Surface d’isolation prévue (m², optionnel)</label>
+                                <input
+                                  type="number"
+                                  name="insulationArea"
+                                  placeholder="ex: 100"
+                                  min="0"
+                                  step="1"
+                                  value={formData.insulationArea}
+                                  onChange={(e) => handleChange('insulationArea', e.target.value)}
+                                  className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
+                                />
+                                <p className="text-xs text-green-600 mt-1.5 block">
+                                  Surface en m² pour travaux d’isolation (ex: murs, toit, 100 m²+ pour bonus PV en VD)
+                                </p>
                               </>
                             )}
 
@@ -1076,7 +1221,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
                               </button>
                               <button
                                 type="submit"
-                                className="block flex-1  px-4 py-2.5 rounded-lg bg-green-500 text-gray-900 font-bold"
+                                className="block flex-1 px-4 py-2.5 rounded-lg bg-green-500 text-gray-900 font-bold"
                               >
                                 Obtenir mon estimation ✅
                               </button>
@@ -1112,13 +1257,19 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
                         </p>
                         <ul className="space-y-1">
                           {simulatorResult.pvAid > 0 && (
-                            <li>🔆 Panneaux solaires : <strong>CHF {simulatorResult.pvAid.toLocaleString('fr-CH')}</strong></li>
+                            <>
+                              <li className="font-medium">🔆 Panneaux solaires :</li>
+                              {simulatorResult.federalAid > 0 && (
+                                <li className="ml-4 text-sm pl-2 border-l-2 border-blue-300">🇨🇭 Fédéral (Pronovo/SuisseEnergie) : <strong>CHF {simulatorResult.federalAid.toLocaleString('fr-CH')}</strong></li>
+                              )}
+                              <li className="ml-4 text-sm pl-2 border-l-2 border-green-300">🟢 Cantonal : <strong>CHF {simulatorResult.cantonalPVAid.toLocaleString('fr-CH')}{formData.canton === 'VD' && simulatorResult.cantonalPVAid === 0 ? ' (bonus isolation possible)' : ''}</strong></li>
+                            </>
                           )}
                           {simulatorResult.hpAid > 0 && (
-                            <li>🔥 Pompe à chaleur : <strong>CHF {simulatorResult.hpAid.toLocaleString('fr-CH')}</strong></li>
-                          )}
-                          {simulatorResult.communal > 0 && (
-                            <li>🏘️ Prime communale estimée : <strong>CHF {simulatorResult.communal.toLocaleString('fr-CH')}</strong></li>
+                            <>
+                              <li className="font-medium">🔥 Pompe à chaleur ({formData.pacType}) :</li>
+                              <li className="ml-4 text-sm pl-2 border-l-2 border-green-300">🟢 Cantonal (intégrant soutien fédéral 2025) : <strong>CHF {simulatorResult.cantonalHPAid.toLocaleString('fr-CH')}</strong></li>
+                            </>
                           )}
                         </ul>
                         <p className="font-bold text-lg mt-2">
