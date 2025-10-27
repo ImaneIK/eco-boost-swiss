@@ -390,7 +390,7 @@ export default function Index() {
                     value={form.codepostal || ''} // Ensure string
                     onChange={(e) => setForm({ ...form, codepostal: e.target.value })}
                     className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="ex: Vaud, Genève, Fribourg"
+                    placeholder="ex: 1000, 1950, 2900"
                     disabled={loading}
                   />
                   {errors.codepostal && <p className="text-destructive text-xs mt-1">{errors.codepostal}</p>}

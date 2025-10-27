@@ -79,7 +79,6 @@ const [formData, setFormData] = useState<FormData>({
         cecb_bonus_min: 500,
         cecb_bonus_max: 1000,
         fossil_replacement_bonus: 1500,
-        communal_bonus_percent: [25, 40],
         conditions: "Demande avant travaux; CECB recommandé; Prime SIG reconduite"
       },
       VD: {
@@ -93,7 +92,6 @@ const [formData, setFormData] = useState<FormData>({
         isolation_chf_per_m2: 60,
         cecb_bonus: 750,
         fossil_replacement_bonus: 1500,
-        communal_bonus_percent: [20, 30],
         conditions: "Programme Bâtiments VD; CECB requis; jusqu'à CHF 8'000 pour PAC air-eau"
       },
       VS: {
@@ -107,7 +105,6 @@ const [formData, setFormData] = useState<FormData>({
         isolation_chf_per_m2: 50,
         cecb_bonus: 500,
         fossil_replacement_bonus: 2000,
-        communal_bonus_percent: [30, 40],
         conditions: "Remplacement d’énergie fossile priorisé; CHF 9'000 pour PAC air-eau"
       },
       FR: {
@@ -121,7 +118,6 @@ const [formData, setFormData] = useState<FormData>({
         isolation_chf_per_m2: 60,
         cecb_bonus: 700,
         fossil_replacement_bonus: 1000,
-        communal_bonus_percent: [25, 25],
         conditions: "CECB obligatoire pour rénovation; CHF 3'500 + CHF 150/kW pour PAC air-eau"
       },
       NE: {
@@ -135,7 +131,6 @@ const [formData, setFormData] = useState<FormData>({
         isolation_chf_per_m2: 50,
         cecb_bonus: 500,
         fossil_replacement_bonus: 1000,
-        communal_bonus_percent: [20, 25],
         conditions: "CECB Plus recommandé; CHF 3'500 + CHF 150/kW pour PAC air-eau"
       },
       JU: {
@@ -149,7 +144,6 @@ const [formData, setFormData] = useState<FormData>({
         isolation_chf_per_m2: 45,
         cecb_bonus: 500,
         fossil_replacement_bonus: 1000,
-        communal_bonus_percent: [20, 25],
         conditions: "Soumission avant travaux; CHF 2'500 + CHF 100/kW pour PAC air-eau"
       }
     },
@@ -346,23 +340,6 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
   return result;
 };
 
-  // Application bonus communal (moyenne)
-  const applyCommunalBonus = (cantonCode, amount) => {
-    const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
-    const cp = c.communal_bonus_percent;
-    let percent = 0;
-    if (Array.isArray(cp)) {
-      percent = Math.round((cp[0] + cp[1]) / 2);
-    } else if (typeof cp === 'number') {
-      percent = cp;
-    }
-    const communal_bonus = Math.round(amount * (percent / 100));
-    return {
-      communal_bonus,
-      communal_percent_used: percent,
-      total_with_commune: amount + communal_bonus
-    };
-  };
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -458,8 +435,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
       subtotal += hp.total_estimated || 0;
     }
 
-    const communal = applyCommunalBonus(effectiveCanton, subtotal);
-    const total = communal.total_with_commune || 0;
+    const total = subtotal;
     const notes = c.conditions || 'Aucune note disponible';
 
     const pvAid = pv ? pv.total_pv_subvention_estimated : 0;
@@ -468,7 +444,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
     setSimulatorResult({ 
       pvAid, 
       hpAid, 
-      communal: communal.communal_bonus || 0, 
+      communal: 0, 
       total, 
       notes 
     });
@@ -496,7 +472,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
       phone: sanitizedData.phone,
       pvAid,
       hpAid,
-      communal: communal.communal_bonus || 0,
+      communal: 0,
       total,
       notes
     };
@@ -534,7 +510,6 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
 
       const formattedPvAid = pvAid.toLocaleString('fr-CH');
       const formattedHpAid = hpAid.toLocaleString('fr-CH');
-      const formattedCommunal = (communal.communal_bonus || 0).toLocaleString('fr-CH');
       const formattedTotal = total.toLocaleString('fr-CH');
 
       const emailParams = {
@@ -557,7 +532,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
         submittedAt: formattedDate,
         pvAid: formattedPvAid,
         hpAid: formattedHpAid,
-        communal: formattedCommunal,
+        communal: 0,
         total: formattedTotal,
         notes: notes || 'Aucune note'
       };
@@ -598,7 +573,6 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
             <ul>
               ${simulatorResult.pvAid > 0 ? `<li>🔆 Panneaux solaires : <strong>CHF ${simulatorResult.pvAid.toLocaleString()}</strong></li>` : ''}
               ${simulatorResult.hpAid > 0 ? `<li>🔥 Pompe à chaleur : <strong>CHF ${simulatorResult.hpAid.toLocaleString()}</strong></li>` : ''}
-              ${simulatorResult.communal > 0 ? `<li>🏘️ Prime communale estimée : <strong>CHF ${simulatorResult.communal.toLocaleString()}</strong></li>` : ''}
             </ul>
             <p class="total"><strong>Total estimé : CHF ${simulatorResult.total.toLocaleString()}</strong></p>
             <p>Ce résultat est indicatif. Un conseiller vérifiera les primes exactes (communes, conditions techniques, certificats).</p>
@@ -606,7 +580,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
           </div>
           <footer>
             <p>comparatifdevis.ch - Rapport généré le ${new Date().toLocaleDateString('fr-CH')}</p>
-            <p>Projet: ${formData.projectType}, Puissance: ${formData.power || 'Estimation'}, Système actuel: ${formData.currentSystem}</p>
+            <p>Projet: ${(formData.projectType =="both") ? 'Panneaux solaires et Pompe à chaleur' : formData.projectType}, Puissance: ${formData.power || 'Estimation'}, Système actuel: ${formData.currentSystem}</p>
             <p>Contact: ${formData.fullname} - ${formData.email} - Code postal: ${formData.postal || 'Non spécifié'}</p>
             <p>Type d'installation: ${formData.installationType || 'Non spécifié'}, Année: ${formData.serviceYear}, CECB: ${formData.hasCECB ? 'Oui' : 'Non'}, Autoconsommation: ${formData.autoconsommation || 'Non spécifié'}%</p>
           </footer>
@@ -1182,7 +1156,7 @@ const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: bo
                   )}
 
                   <footer className="mt-4 text-xs text-green-600 text-center">
-                    Note : Les montants sont indicatifs. Pour un chiffrage précis, un expert vérifiera votre dossier et les primes communales spécifiques.
+                    Note : Les montants sont indicatifs (fédéraux et cantonaux). Pour un chiffrage précis des primes communales, un expert vérifiera votre dossier.
                   </footer>
                 </div>
               </motion.div>
