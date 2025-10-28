@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import emailjs from '@emailjs/browser';
-
 interface FormData {
   projectType: string;
   buildingType: string;
@@ -9,20 +8,19 @@ interface FormData {
   postal: string;
   postalCity?: string;
   currentSystem: string;
-  pvPower: number;
-  pacPower: number;
+  pvPower: string;
+  pacPower: string;
   pacType: string;
   ownerStatus: string;
   installationType: string;
   serviceYear: string;
   hasCECB: boolean;
-  autoconsommation: number;
-  insulationArea: number;
+  autoconsommation: string;
+  insulationArea: string;
   fullname: string;
   email: string;
   phone: string;
 }
-
 interface PACResult {
   type: string;
   base: number;
@@ -34,7 +32,6 @@ interface PACResult {
   federal: number;
   cantonal: number;
 }
-
 const ImprovedSubventionsSection = () => {
   const [showSimulator, setShowSimulator] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -45,20 +42,19 @@ const ImprovedSubventionsSection = () => {
     postal: '',
     postalCity: '',
     currentSystem: 'fuel',
-    pvPower: 0,
-    pacPower: 0,
+    pvPower: '',
+    pacPower: '',
     pacType: 'air-eau',
     ownerStatus: 'owner',
     installationType: '',
     serviceYear: '2025',
     hasCECB: false,
-    autoconsommation: 0,
-    insulationArea: 0,
+    autoconsommation: '',
+    insulationArea: '',
     fullname: '',
     email: '',
     phone: ''
   });
-
   const [showResult, setShowResult] = useState(false);
   const [simulatorResult, setSimulatorResult] = useState({
     pvAid: 0,
@@ -70,7 +66,6 @@ const ImprovedSubventionsSection = () => {
     total: 0,
     notes: ''
   });
-
   const DATA = {
     cantons: {
       GE: {
@@ -171,7 +166,6 @@ const ImprovedSubventionsSection = () => {
       programme_batiments_support_estimated: "variable; up to 30% investissement (PAC intégré)"
     }
   };
-
   const postalData = {
     VD: [
       { code: '1000', city: 'Lausanne' },
@@ -275,17 +269,14 @@ const ImprovedSubventionsSection = () => {
       { code: '2856', city: 'Boécourt' }
     ]
   };
-
   const avgRange = (range) => {
     if (!Array.isArray(range)) return range;
     return (range[0] + range[1]) / 2;
   };
-
   const chooseWithin = (min, max) => {
     if (typeof min === 'number' && typeof max === 'number') return Math.round((min + max) / 2);
     return min || max;
   };
-
   const calculatePV = (cantonCode, kwc, installationType = '', hasCECB = false, autoconsommation = 0, serviceYear = 2025, insulationArea = 0) => {
     let reduction = 1;
     if (serviceYear > 2025) {
@@ -305,7 +296,6 @@ const ImprovedSubventionsSection = () => {
     const federal_min = DATA.federal.pronovo_pru_per_kwc_estimate_min * kwc * reduction;
     const federal_max = DATA.federal.pronovo_pru_per_kwc_estimate_max * kwc * reduction;
     const federal_estimate = Math.round((federal_min + federal_max) / 2);
-
     let cantonal = 0;
     if (cantonCode === 'GE') {
       cantonal = Math.min(c.pv_prime_max || 0, 0.2 * federal_estimate);
@@ -328,10 +318,8 @@ const ImprovedSubventionsSection = () => {
         cantonal += c.cecb_bonus;
       }
     }
-
     const federal = federal_estimate;
     const total_pv_subvention_estimated = federal + cantonal;
-
     return {
       kwc,
       pv_rate_chf_per_kwc: pv_rate,
@@ -343,11 +331,9 @@ const ImprovedSubventionsSection = () => {
       total_pv_subvention_estimated
     };
   };
-
   const calculatePAC = (cantonCode: string, type: string, kw: number, isFossil: boolean, hasCECB: boolean): PACResult => {
     const c = DATA.cantons[cantonCode] || DATA.cantons.VD;
     const result: PACResult = { type, base: 0, per_kw: 0, kw: 0, estimated_subvention: 0, fossil_replacement_bonus: 0, total_estimated: 0, federal: 0, cantonal: 0 };
-
     let base: number, per_kw: number;
     if (type === 'air-eau') {
       base = c.pac_air_eau_base || 0;
@@ -358,50 +344,48 @@ const ImprovedSubventionsSection = () => {
     } else {
       throw new Error('Type PAC inconnu (air-eau | sol-eau)');
     }
-
     let estimated_subvention;
     if (kw <= 15) {
       estimated_subvention = base;
     } else {
       estimated_subvention = base + Math.round(per_kw * kw);
     }
-
     if (cantonCode === 'VD' && !hasCECB) {
       estimated_subvention = 0;
     }
-
     result.base = base;
     result.per_kw = per_kw;
     result.kw = kw;
     result.estimated_subvention = estimated_subvention;
-
     let fossilBonus = 0;
     if (isFossil && c.fossil_replacement_bonus > 0) {
       fossilBonus = c.fossil_replacement_bonus;
     }
     result.fossil_replacement_bonus = fossilBonus;
-
     let cecbBonus = 0;
     if (cantonCode === 'VD' && hasCECB) {
       cecbBonus = c.cecb_bonus || 0;
     }
-
     result.total_estimated = estimated_subvention + fossilBonus + cecbBonus;
     result.federal = 0;
     result.cantonal = estimated_subvention + fossilBonus + cecbBonus;
-
     return result;
   };
-
   const handleChange = (field: keyof FormData, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: typeof value === 'string' && ['pvPower', 'pacPower', 'autoconsommation', 'insulationArea'].includes(field)
-        ? parseFloat(value) || 0
-        : value
-    }));
-  };
-
+  setFormData(prev => {
+    if (typeof value === 'string' && ['pvPower', 'pacPower', 'autoconsommation', 'insulationArea'].includes(field)) {
+      // Allow empty or valid numeric strings (integers or decimals, including partial like '1.')
+      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+        return { ...prev, [field]: value };
+      } else {
+        // Invalid: don't update, input reverts
+        return prev;
+      }
+    } else {
+      return { ...prev, [field]: value };
+    }
+  });
+};
   const handlePostalChange = (e) => {
     const code = e.target.value;
     const opt = postalData[formData.canton]?.find(o => o.code === code);
@@ -411,7 +395,6 @@ const ImprovedSubventionsSection = () => {
       postalCity: opt ? opt.city : ''
     }));
   };
-
   const handleNext = (step: number) => {
     if (step === 3 && currentStep === 2) {
       if (!formData.canton) {
@@ -420,35 +403,32 @@ const ImprovedSubventionsSection = () => {
       }
     }
     if (step === 4 && currentStep === 3) {
-      if ((formData.projectType === 'pv' || formData.projectType === 'both') && formData.pvPower <= 0) {
+      if ((formData.projectType === 'pv' || formData.projectType === 'both') && (parseFloat(formData.pvPower) || 0) <= 0) {
         alert('Veuillez entrer une puissance PV valide (supérieure à 0).');
         return;
       }
-      if ((formData.projectType === 'hp' || formData.projectType === 'both') && formData.pacPower <= 0) {
+      if ((formData.projectType === 'hp' || formData.projectType === 'both') && (parseFloat(formData.pacPower) || 0) <= 0) {
         alert('Veuillez entrer une puissance PAC valide (supérieure à 0).');
         return;
       }
-      if ((formData.projectType === 'pv' || formData.projectType === 'both') && (formData.autoconsommation < 0 || formData.autoconsommation > 100)) {
+      if ((formData.projectType === 'pv' || formData.projectType === 'both') && ((parseFloat(formData.autoconsommation) || 0) < 0 || (parseFloat(formData.autoconsommation) || 0) > 100)) {
         alert('L’autoconsommation doit être entre 0 et 100 %.');
         return;
       }
     }
     if (step === 4 && currentStep === 3) {
-      if (formData.canton === 'VD' && (formData.projectType === 'pv' || formData.projectType === 'both') && formData.insulationArea <= 0) {
+      if (formData.canton === 'VD' && (formData.projectType === 'pv' || formData.projectType === 'both') && (parseFloat(formData.insulationArea) || 0) <= 0) {
         alert("Dans le canton de Vaud, une surface d'isolation est requise pour les subventions PV.");
         return;
       }
     }
     setCurrentStep(step);
   };
-
   const handlePrev = (step: number) => {
     setCurrentStep(step);
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     const sanitizedData: FormData = {
       projectType: (formData.projectType || '').trim() || 'pv',
       canton: (formData.canton || '').trim() || 'VD',
@@ -456,27 +436,25 @@ const ImprovedSubventionsSection = () => {
       postalCity: (formData.postalCity || '').trim(),
       buildingType: (formData.buildingType || '').trim() || 'house',
       currentSystem: (formData.currentSystem || '').trim() || 'none',
-      pvPower: parseFloat((formData.pvPower || 0).toString().trim()) || (formData.projectType === 'pv' || formData.projectType === 'both' ? 10 : 0),
-      pacPower: parseFloat((formData.pacPower || 0).toString().trim()) || (formData.projectType === 'hp' || formData.projectType === 'both' ? 12 : 0),
+      pvPower: formData.pvPower,
+      pacPower: formData.pacPower,
       pacType: (formData.pacType || '').trim() || 'air-eau',
       ownerStatus: (formData.ownerStatus || '').trim() || 'owner',
       installationType: (formData.installationType || '').trim() || '',
       serviceYear: (formData.serviceYear || '').trim() || '2025',
       hasCECB: !!formData.hasCECB,
-      autoconsommation: parseFloat((formData.autoconsommation || 0).toString().trim()) || 0,
-      insulationArea: formData.projectType === 'hp' ? 0 : parseFloat((formData.insulationArea || 0).toString().trim()) || 0,
+      autoconsommation: formData.autoconsommation,
+      insulationArea: formData.insulationArea,
       fullname: (formData.fullname || '').trim(),
       email: (formData.email || '').trim().toLowerCase(),
       phone: (formData.phone || '').trim().replace(/\D/g, '')
     };
-
     const requiredFields = ['fullname', 'email', 'phone', 'canton'];
     const missingFields = requiredFields.filter(field => !sanitizedData[field]);
     if (missingFields.length > 0) {
       alert(`Veuillez remplir: ${missingFields.join(', ')}`);
       return;
     }
-
     if (!/\S+@\S+\.\S+/.test(sanitizedData.email)) {
       alert('Email invalide');
       return;
@@ -485,41 +463,39 @@ const ImprovedSubventionsSection = () => {
       alert('Numéro de téléphone trop court');
       return;
     }
-
     const effectiveCanton = sanitizedData.canton;
     const c = DATA.cantons[effectiveCanton] || DATA.cantons.VD;
     const project = sanitizedData.projectType;
     const isFossil = sanitizedData.currentSystem === 'fuel' || sanitizedData.currentSystem === 'gas';
-
     let pv = null;
     let hp = null;
     let federalAid = 0;
     let cantonalPVAid = 0;
     let cantonalHPAid = 0;
-
+    const pvPowerNum = parseFloat(sanitizedData.pvPower) || (formData.projectType === 'pv' || formData.projectType === 'both' ? 10 : 0);
+    const pacPowerNum = parseFloat(sanitizedData.pacPower) || (formData.projectType === 'hp' || formData.projectType === 'both' ? 12 : 0);
+    const autoconsommationNum = parseFloat(sanitizedData.autoconsommation) || 0;
+    const insulationAreaNum = formData.projectType === 'hp' ? 0 : parseFloat(sanitizedData.insulationArea) || 0;
     console.log('FormData:', sanitizedData);
-
     if (project === 'pv' || project === 'both') {
       pv = calculatePV(
         effectiveCanton,
-        sanitizedData.pvPower,
+        pvPowerNum,
         sanitizedData.installationType,
         sanitizedData.hasCECB,
-        sanitizedData.autoconsommation,
+        autoconsommationNum,
         parseInt(sanitizedData.serviceYear),
-        sanitizedData.insulationArea
+        insulationAreaNum
       );
       federalAid += pv.federal || 0;
       cantonalPVAid += pv.cantonal || 0;
     }
-
     if (project === 'hp' || project === 'both') {
-      hp = calculatePAC(effectiveCanton, sanitizedData.pacType, sanitizedData.pacPower, isFossil, sanitizedData.hasCECB);
-      console.log('PAC Inputs:', { pacPower: sanitizedData.pacPower, pacType: sanitizedData.pacType, hasCECB: sanitizedData.hasCECB });
+      hp = calculatePAC(effectiveCanton, sanitizedData.pacType, pacPowerNum, isFossil, sanitizedData.hasCECB);
+      console.log('PAC Inputs:', { pacPower: pacPowerNum, pacType: sanitizedData.pacType, hasCECB: sanitizedData.hasCECB });
       console.log('PAC Result:', hp);
       cantonalHPAid += hp.cantonal || 0;
     }
-
     const communal = 0;
     const total = federalAid + cantonalPVAid + cantonalHPAid;
     const originalConditions = c.conditions || 'Aucune note disponible';
@@ -531,7 +507,6 @@ const ImprovedSubventionsSection = () => {
     }
     const pvAid = pv ? pv.total_pv_subvention_estimated : 0;
     const hpAid = hp ? hp.total_estimated : 0;
-
     setSimulatorResult({
       pvAid,
       hpAid,
@@ -543,7 +518,6 @@ const ImprovedSubventionsSection = () => {
       notes
     });
     setShowResult(true);
-
     const payload = {
       mode: 'simulator',
       submittedAt: new Date().toISOString(),
@@ -553,15 +527,15 @@ const ImprovedSubventionsSection = () => {
       postalCity: sanitizedData.postalCity || 'Non spécifié',
       buildingType: sanitizedData.buildingType,
       currentSystem: sanitizedData.currentSystem,
-      pvPower: sanitizedData.pvPower,
-      pacPower: sanitizedData.pacPower,
+      pvPower: pvPowerNum,
+      pacPower: pacPowerNum,
       pacType: sanitizedData.pacType,
       ownerStatus: sanitizedData.ownerStatus,
       installationType: sanitizedData.installationType,
       serviceYear: sanitizedData.serviceYear,
       hasCECB: sanitizedData.hasCECB,
-      autoconsommation: sanitizedData.autoconsommation,
-      insulationArea: sanitizedData.insulationArea,
+      autoconsommation: autoconsommationNum,
+      insulationArea: insulationAreaNum,
       fullname: sanitizedData.fullname,
       email: sanitizedData.email,
       phone: sanitizedData.phone,
@@ -574,7 +548,6 @@ const ImprovedSubventionsSection = () => {
       total,
       notes
     };
-
     const webhookURL = `${import.meta.env.VITE_API_URL}/api/submit`;
     if (webhookURL) {
       fetch(webhookURL, {
@@ -590,11 +563,9 @@ const ImprovedSubventionsSection = () => {
           console.error("Erreur d’envoi vers server :", error);
         });
     }
-
     const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
     const emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_SIMULATOR;
     const emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-
     if (emailjsServiceId && emailjsTemplateId && emailjsPublicKey) {
       const formattedDate = new Date().toLocaleString('fr-CH', {
         day: '2-digit',
@@ -603,7 +574,6 @@ const ImprovedSubventionsSection = () => {
         hour: '2-digit',
         minute: '2-digit'
       }).replace(/\//g, '.');
-
       const emailParams = {
         fullname: sanitizedData.fullname || 'Anonyme',
         email: sanitizedData.email,
@@ -614,15 +584,15 @@ const ImprovedSubventionsSection = () => {
         postalCity: sanitizedData.postalCity || 'Non spécifiée',
         buildingType: sanitizedData.buildingType,
         currentSystem: sanitizedData.currentSystem,
-        pvPower: sanitizedData.pvPower || 'Non spécifié',
-        pacPower: sanitizedData.pacPower || 'Non spécifié',
+        pvPower: pvPowerNum || 'Non spécifié',
+        pacPower: pacPowerNum || 'Non spécifié',
         pacType: sanitizedData.pacType,
         ownerStatus: sanitizedData.ownerStatus,
         installationType: sanitizedData.installationType || 'Non spécifié',
         serviceYear: sanitizedData.serviceYear,
         hasCECB: sanitizedData.hasCECB ? 'Oui' : 'Non',
-        autoconsommation: sanitizedData.autoconsommation || 'Non spécifié',
-        insulationArea: sanitizedData.insulationArea || 'Non spécifié',
+        autoconsommation: autoconsommationNum || 'Non spécifié',
+        insulationArea: insulationAreaNum || 'Non spécifié',
         submittedAt: formattedDate,
         pvAid: pvAid.toLocaleString('fr-CH'),
         hpAid: hpAid.toLocaleString('fr-CH'),
@@ -633,7 +603,6 @@ const ImprovedSubventionsSection = () => {
         total: total.toLocaleString('fr-CH'),
         notes: notes || 'Aucune note'
       };
-
       emailjs.send(emailjsServiceId, emailjsTemplateId, emailParams, emailjsPublicKey)
         .then((response) => {
           console.log('Email sent successfully:', response.status, response.text);
@@ -645,12 +614,10 @@ const ImprovedSubventionsSection = () => {
       console.warn('EmailJS env vars missing—email not sent');
     }
   };
-
   const handleDownloadPDF = () => {
     const projectLabel = formData.projectType === 'both' ? 'Panneaux solaires et Pompe à chaleur' :
                          formData.projectType === 'pv' ? 'Panneaux solaires' :
                          formData.projectType === 'hp' ? `Pompe à chaleur (${formData.pacType})` : formData.projectType;
-
     const printContent = `
       <html>
         <head>
@@ -701,13 +668,11 @@ const ImprovedSubventionsSection = () => {
         </body>
       </html>
     `;
-
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.print();
   };
-
   const handleShowSimulator = () => {
     setShowSimulator(true);
     setCurrentStep(1);
@@ -717,9 +682,7 @@ const ImprovedSubventionsSection = () => {
       element.scrollIntoView({ behavior: 'smooth' });
     }
   };
-
   const stepLabels = ['Projet', 'Localisation', 'Détails', 'Contact'];
-
   return (
     <section className="py-16 lg:py-20 relative overflow-hidden">
       <div className="absolute inset-0 opacity-5">
@@ -738,7 +701,6 @@ const ImprovedSubventionsSection = () => {
           <p className="text-base text-green-700 mb-8">
             Les aides varient selon le code postal. Exemples :
           </p>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <div className="p-6 bg-white rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-3xl mb-3">🇨🇭</div>
@@ -747,7 +709,6 @@ const ImprovedSubventionsSection = () => {
                 SuisseEnergie et autres primes pour l'efficacité énergétique.
               </p>
             </div>
-
             <div className="p-6 bg-white rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-3xl mb-3">♨️</div>
               <h5 className="font-bold text-green-800 mb-2">Aides cantonales</h5>
@@ -755,7 +716,6 @@ const ImprovedSubventionsSection = () => {
                 Aides spécifiques pour remplacement de chaudières anciennes.
               </p>
             </div>
-
             <div className="p-6 bg-white rounded-xl border border-green-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-3xl mb-3">🏛️</div>
               <h5 className="font-bold text-green-800 mb-2">Subventions communales</h5>
@@ -764,7 +724,6 @@ const ImprovedSubventionsSection = () => {
               </p>
             </div>
           </div>
-
           {!showSimulator && (
             <section
               id="intro-aides"
@@ -809,16 +768,13 @@ const ImprovedSubventionsSection = () => {
                     />
                   </svg>
                 </div>
-
                 <div style={{ flex: '1', minWidth: '240px' }}>
                   <h2 style={{ margin: '0 0 8px', fontSize: '22px', lineHeight: '1.05', color: '#065f46' }}>
                     Profitez des aides suisses pour votre transition énergétique !
                   </h2>
-
                   <p style={{ margin: '0 0 14px', color: '#047857', fontSize: '15px' }}>
                     comparatifdevis.ch vous accompagne pour <strong>obtenir les subventions disponibles</strong> en Suisse pour l’installation de <strong>panneaux photovoltaïques</strong> ou de <strong>pompes à chaleur</strong>, que vous soyez <strong>particulier ou entreprise</strong>.
                   </p>
-
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     <button
                       onClick={handleShowSimulator}
@@ -837,7 +793,6 @@ const ImprovedSubventionsSection = () => {
                     >
                       Lancer la simulation
                     </button>
-
                     <a
                       href="mailto:contact@comparatifdevis.com"
                       style={{
@@ -857,7 +812,6 @@ const ImprovedSubventionsSection = () => {
               </div>
             </section>
           )}
-
           <AnimatePresence>
             {showSimulator && (
               <motion.div
@@ -873,7 +827,6 @@ const ImprovedSubventionsSection = () => {
                     <>
                       <h1 className="text-2xl font-bold mb-1">Simulateur d'aides - Panneaux solaires & Pompes à chaleur</h1>
                       <p className="text-green-600 mb-4">Estimez en 2 minutes les subventions fédérales, cantonales et communales potentielles. Les résultats sont indicatifs — un conseiller vérifiera l'éligibilité exacte.</p>
-
                       <div className="flex flex-wrap gap-2 my-4">
                         {[1, 2, 3, 4].map((s) => (
                           <div
@@ -888,7 +841,6 @@ const ImprovedSubventionsSection = () => {
                           </div>
                         ))}
                       </div>
-
                       <form onSubmit={handleSubmit} className="space-y-4">
                         {currentStep === 1 && (
                           <div>
@@ -934,7 +886,6 @@ const ImprovedSubventionsSection = () => {
                                 </label>
                               </div>
                             </div>
-
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Type de bâtiment</label>
                             <select
                               name="buildingType"
@@ -947,7 +898,6 @@ const ImprovedSubventionsSection = () => {
                               <option value="commercial">Bâtiment commercial / industriel</option>
                               <option value="other">Autre</option>
                             </select>
-
                             <div className="mt-3">
                               <button
                                 type="button"
@@ -959,7 +909,6 @@ const ImprovedSubventionsSection = () => {
                             </div>
                           </div>
                         )}
-
                         {currentStep === 2 && (
                           <div>
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Dans quel canton se situe le projet ?</label>
@@ -977,7 +926,6 @@ const ImprovedSubventionsSection = () => {
                               <option value="NE">Neuchâtel</option>
                               <option value="JU">Jura</option>
                             </select>
-
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Code postal / Commune</label>
                             <select
                               value={formData.postal}
@@ -991,7 +939,6 @@ const ImprovedSubventionsSection = () => {
                                 </option>
                               ))}
                             </select>
-
                             <div className="mt-3 flex justify-between">
                               <button
                                 type="button"
@@ -1010,7 +957,6 @@ const ImprovedSubventionsSection = () => {
                             </div>
                           </div>
                         )}
-
                         {currentStep === 3 && (
                           <div>
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Quel est votre système actuel ?</label>
@@ -1026,7 +972,6 @@ const ImprovedSubventionsSection = () => {
                               <option value="hp_old">PAC existante (remplacement)</option>
                               <option value="none">Aucun / nouvelle construction</option>
                             </select>
-
                             {(formData.projectType === 'hp' || formData.projectType === 'both') && (
                               <>
                                 <label className="block mt-3 font-semibold text-green-800 text-sm">Type de pompe à chaleur</label>
@@ -1039,10 +984,9 @@ const ImprovedSubventionsSection = () => {
                                   <option value="air-eau">Air-eau</option>
                                   <option value="sol-eau">Sol-eau</option>
                                 </select>
-
                                 <label className="block mt-3 font-semibold text-green-800 text-sm">Puissance de la PAC (kW)</label>
                                 <input
-                                  type="number"
+                                  type="text"
                                   name="pacPower"
                                   placeholder="ex: 12"
                                   min="0"
@@ -1056,12 +1000,11 @@ const ImprovedSubventionsSection = () => {
                                 </p>
                               </>
                             )}
-
                             {(formData.projectType === 'pv' || formData.projectType === 'both') && (
                               <>
                                 <label className="block mt-3 font-semibold text-green-800 text-sm">Puissance installée PV (kWc)</label>
                                 <input
-                                  type="number"
+                                  type="text"
                                   name="pvPower"
                                   placeholder="ex: 10"
                                   min="0"
@@ -1073,7 +1016,6 @@ const ImprovedSubventionsSection = () => {
                                 <p className="text-xs text-green-600 mt-1.5 block">
                                   Puissance en kWc (ex: petite installation 5 kWc, moyenne 10 kWc, grande 20 kWc+)
                                 </p>
-
                                 <label className="block mt-3 font-semibold text-green-800 text-sm">Type d’installation</label>
                                 <select
                                   name="installationType"
@@ -1087,10 +1029,9 @@ const ImprovedSubventionsSection = () => {
                                   <option value="integre">Intégré au bâtiment</option>
                                   <option value="autre">Autre</option>
                                 </select>
-
                                 <label className="block mt-3 font-semibold text-green-800 text-sm">Autoconsommation prévue (%)</label>
                                 <input
-                                  type="number"
+                                  type="text"
                                   name="autoconsommation"
                                   placeholder="ex: 30"
                                   min="0"
@@ -1102,10 +1043,9 @@ const ImprovedSubventionsSection = () => {
                                 <p className="text-xs text-green-600 mt-1.5 block">
                                   Pourcentage d’autoconsommation (ex: 30–70 %, selon usage)
                                 </p>
-
                                 <label className="block mt-3 font-semibold text-green-800 text-sm">Surface d’isolation prévue (m², optionnel)</label>
                                 <input
-                                  type="number"
+                                  type="text"
                                   name="insulationArea"
                                   placeholder="ex: 100"
                                   min="0"
@@ -1119,7 +1059,6 @@ const ImprovedSubventionsSection = () => {
                                 </p>
                               </>
                             )}
-
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Année de mise en service</label>
                             <select
                               name="serviceYear"
@@ -1131,7 +1070,6 @@ const ImprovedSubventionsSection = () => {
                               <option value="2026">2026</option>
                               <option value="2027">2027</option>
                             </select>
-
                             <label className="block mt-3 font-semibold text-green-800 text-sm">CECB / Certificat énergétique</label>
                             <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer mt-1.5">
                               <input
@@ -1143,7 +1081,6 @@ const ImprovedSubventionsSection = () => {
                               />
                               Oui, certificat disponible
                             </label>
-
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Vous êtes :</label>
                             <select
                               name="ownerStatus"
@@ -1156,7 +1093,6 @@ const ImprovedSubventionsSection = () => {
                               <option value="tenant">Locataire</option>
                               <option value="company">Entreprise / collectivité</option>
                             </select>
-
                             <div className="mt-3 flex justify-between">
                               <button
                                 type="button"
@@ -1175,7 +1111,6 @@ const ImprovedSubventionsSection = () => {
                             </div>
                           </div>
                         )}
-
                         {currentStep === 4 && (
                           <div>
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Nom complet</label>
@@ -1188,7 +1123,6 @@ const ImprovedSubventionsSection = () => {
                               onChange={(e) => handleChange('fullname', e.target.value)}
                               className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
                             />
-
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Email</label>
                             <input
                               type="email"
@@ -1199,7 +1133,6 @@ const ImprovedSubventionsSection = () => {
                               onChange={(e) => handleChange('email', e.target.value)}
                               className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
                             />
-
                             <label className="block mt-3 font-semibold text-green-800 text-sm">Téléphone</label>
                             <input
                               type="tel"
@@ -1210,7 +1143,6 @@ const ImprovedSubventionsSection = () => {
                               onChange={(e) => handleChange('phone', e.target.value)}
                               className="w-full p-2.5 rounded-lg border border-gray-300 mt-1.5"
                             />
-
                             <div className="mt-3 flex flex-col lg:flex-row gap-1 justify-between">
                               <button
                                 type="button"
@@ -1234,7 +1166,7 @@ const ImprovedSubventionsSection = () => {
                     <>
                       <h1 className="text-2xl font-bold mb-1">Simulateur d'aides - Panneaux solaires & Pompes à chaleur</h1>
                       <p className="text-green-600 mb-4">Estimez en 2 minutes les subventions fédérales, cantonales et communales potentielles. Les résultats sont indicatifs — un conseiller vérifiera l'éligibilité exacte.</p>
-                      
+                     
                       <div className="flex gap-2 my-4">
                         {[1, 2, 3, 4].map((s) => (
                           <div
@@ -1249,7 +1181,6 @@ const ImprovedSubventionsSection = () => {
                           </div>
                         ))}
                       </div>
-
                       <div className="mt-4 p-3.5 rounded-xl bg-gradient-to-b from-green-50 to-emerald-50">
                         <strong>Estimation rapide</strong>
                         <p className="my-1.5">
@@ -1284,7 +1215,6 @@ const ImprovedSubventionsSection = () => {
                           </p>
                         )}
                       </div>
-
                       <div className="mt-3 flex flex-col lg:flex-row gap-2">
                         <a href="tel:+41211234567" className="block flex-1 px-4 py-2.5 rounded-lg bg-green-500 text-gray-900 font-bold flex-1 text-center">
                           Réserver un appel
@@ -1296,7 +1226,6 @@ const ImprovedSubventionsSection = () => {
                           Télécharger le rapport (PDF)
                         </button>
                       </div>
-
                       <button
                         onClick={() => setShowResult(false)}
                         className="mt-4 w-full flex-1 px-4 py-2.5 rounded-lg bg-gray-200 text-gray-900 font-bold"
@@ -1305,7 +1234,6 @@ const ImprovedSubventionsSection = () => {
                       </button>
                     </>
                   )}
-
                   <footer className="mt-4 text-xs text-green-600 text-center">
                     Note : Les montants sont indicatifs (fédéraux et cantonaux). Pour un chiffrage précis des primes communales, un expert vérifiera votre dossier.
                   </footer>
@@ -1318,5 +1246,4 @@ const ImprovedSubventionsSection = () => {
     </section>
   );
 };
-
 export default ImprovedSubventionsSection;
